@@ -53,24 +53,12 @@ Deno.serve(async (req: Request) => {
     const url = new URL(req.url);
     const search = url.searchParams.get('search') || '';
     
-    let allProducts;
+    let allProducts = [];
     
     if (search) {
-      // Optimize search to use a single API call with more efficient parameters
-      let queryParams = new URLSearchParams({
-        status: 'publish',
-        per_page: '20', // Limit results to improve performance
-      });
-      
-      // For SKU-like searches, use sku parameter which is more efficient
-      if (search.length <= 20 && /^[a-zA-Z0-9\-_]+$/.test(search)) {
-        queryParams.append('sku', search);
-      } else {
-        queryParams.append('search', search);
-      }
-      
-      const nameSearchUrl = `${settings.api_url}/products?${queryParams.toString()}`;
-      console.log(`Searching WooCommerce with URL: ${nameSearchUrl}`);
+      // First search by product name
+      const nameSearchUrl = `${settings.api_url}/products?search=${encodeURIComponent(search)}&status=publish&per_page=50`;
+      console.log(`Searching products by name: ${nameSearchUrl}`);
       
       const nameResponse = await fetch(nameSearchUrl, {
         headers: {
@@ -79,19 +67,70 @@ Deno.serve(async (req: Request) => {
         },
       });
 
-      if (!nameResponse.ok) {
-        const errorText = await nameResponse.text();
-        console.error('WooCommerce API Error:', errorText);
-        return new Response(
-          JSON.stringify({ error: 'Failed to fetch products from WooCommerce' }),
-          {
-            status: nameResponse.status,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          }
-        );
+      
+      // Get results from name search
+      if (nameResponse.ok) {
+        const nameResults = await nameResponse.json();
+        console.log(`Found ${nameResults.length} products by name`);
+        allProducts = [...nameResults];
       }
       
-      allProducts = await nameResponse.json();
+      // Then search by SKU (separate request for better matching)
+      if (search.length <= 20) {
+        const skuSearchUrl = `${settings.api_url}/products?sku=${encodeURIComponent(search)}&status=publish&per_page=20`;
+        console.log(`Searching products by SKU: ${skuSearchUrl}`);
+        
+        const skuResponse = await fetch(skuSearchUrl, {
+          headers: {
+            'Authorization': `Basic ${wcAuth}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (skuResponse.ok) {
+          const skuResults = await skuResponse.json();
+          console.log(`Found ${skuResults.length} products by exact SKU`);
+          
+          // Add SKU results that aren't already in the array
+          skuResults.forEach(skuProduct => {
+            if (!allProducts.some(p => p.id === skuProduct.id)) {
+              allProducts.push(skuProduct);
+            }
+          });
+        }
+      }
+      
+      // Fallback: If no results or very few, get all products and filter client-side
+      if (allProducts.length < 2) {
+        const allProductsUrl = `${settings.api_url}/products?per_page=100&status=publish`;
+        console.log(`Fallback search for all products: ${allProductsUrl}`);
+        
+        const allResponse = await fetch(allProductsUrl, {
+          headers: {
+            'Authorization': `Basic ${wcAuth}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (allResponse.ok) {
+          const allResults = await allResponse.json();
+          // Filter results that contain the search term in the name, SKU or slug
+          const searchTermLower = search.toLowerCase();
+          const filteredResults = allResults.filter(product => 
+            (product.name && product.name.toLowerCase().includes(searchTermLower)) ||
+            (product.sku && product.sku.toLowerCase().includes(searchTermLower)) ||
+            (product.slug && product.slug.toLowerCase().includes(searchTermLower))
+          ).filter(product => !allProducts.some(p => p.id === product.id));
+          
+          console.log(`Found ${filteredResults.length} additional products through filtering`);
+          allProducts = [...allProducts, ...filteredResults];
+        }
+      }
+      
+      // If we still have no products, return empty array
+      if (allProducts.length === 0) {
+        console.log(`No products found matching "${search}"`);
+      }
     } else {
       // No search term, get regular products
       const wcUrl = `${settings.api_url}/products?per_page=20&status=publish`;
@@ -115,6 +154,16 @@ Deno.serve(async (req: Request) => {
       }
       
       allProducts = await wcResponse.json();
+    }
+
+    // Sort results with exact matches at the top
+    if (search && allProducts.length > 0) {
+      const searchLower = search.toLowerCase();
+      allProducts.sort((a, b) => {
+        const aNameStartsWith = a.name.toLowerCase().startsWith(searchLower) ? -1 : 0;
+        const bNameStartsWith = b.name.toLowerCase().startsWith(searchLower) ? -1 : 0;
+        return aNameStartsWith - bNameStartsWith;
+      });
     }
 
     let taxRates = [];
