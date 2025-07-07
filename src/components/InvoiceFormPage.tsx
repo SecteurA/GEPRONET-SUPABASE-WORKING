@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Save, Trash2, Calculator, Package, ArrowLeft } from 'lucide-react';
+import ClientSelector from './ClientSelector';
 
 interface Product {
   id: number;
@@ -41,9 +42,10 @@ interface Invoice {
 interface InvoiceFormPageProps {
   onBack: () => void;
   preFilledData?: any;
+  onClientSelect?: (client: any) => void;
 }
 
-const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData }) => {
+const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData, onClientSelect }) => {
   const [invoice, setInvoice] = useState<Invoice>({
     customer_name: '',
     customer_email: '',
@@ -63,6 +65,7 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
   const [searchTouched, setSearchTouched] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<any>(null);
 
   // Initialize with pre-filled data if provided
   useEffect(() => {
@@ -70,6 +73,39 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
       setInvoice(preFilledData);
     }
   }, [preFilledData]);
+
+  // Handle client selection from ClientSelector
+  const handleClientSelect = (client: any) => {
+    setSelectedClient(client);
+    if (client) {
+      // Auto-fill invoice fields with client data
+      setInvoice(prev => ({
+        ...prev,
+        customer_name: `${client.first_name} ${client.last_name}`.trim(),
+        customer_email: client.email || '',
+        customer_phone: client.phone || '',
+        customer_address: client.address_line1 || '',
+      }));
+      
+      // Call parent callback if provided
+      if (onClientSelect) {
+        onClientSelect(client);
+      }
+    } else {
+      // Clear invoice fields when no client is selected
+      setInvoice(prev => ({
+        ...prev,
+        customer_name: '',
+        customer_email: '',
+        customer_phone: '',
+        customer_address: '',
+      }));
+      
+      if (onClientSelect) {
+        onClientSelect(null);
+      }
+    }
+  };
 
   // Debounced search function
   const fetchProducts = async (searchTerm: string) => {
@@ -338,70 +374,37 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
         </div>
       )}
 
-      {/* Customer Information */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Informations Client</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nom du client *
-            </label>
-            <input
-              type="text"
-              value={invoice.customer_name}
-              onChange={(e) => setInvoice(prev => ({ ...prev, customer_name: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              value={invoice.customer_email}
-              onChange={(e) => setInvoice(prev => ({ ...prev, customer_email: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Téléphone
-            </label>
-            <input
-              type="tel"
-              value={invoice.customer_phone}
-              onChange={(e) => setInvoice(prev => ({ ...prev, customer_phone: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Date d'échéance
-            </label>
-            <input
-              type="date"
-              value={invoice.due_date}
-              onChange={(e) => setInvoice(prev => ({ ...prev, due_date: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Adresse
-            </label>
-            <textarea
-              value={invoice.customer_address}
-              onChange={(e) => setInvoice(prev => ({ ...prev, customer_address: e.target.value }))}
-              rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
-            />
+      {/* Client Selector */}
+      <ClientSelector
+        selectedClient={selectedClient}
+        onClientSelect={handleClientSelect}
+        title="Informations Client"
+      />
+
+      {/* Additional Invoice Fields */}
+      {selectedClient && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Détails de la facture</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Date d'échéance
+              </label>
+              <input
+                type="date"
+                value={invoice.due_date}
+                onChange={(e) => setInvoice(prev => ({ ...prev, due_date: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
+              />
+            </div>
           </div>
         </div>
-        
-        {/* Add Product Button - After customer information */}
-        <div className="mt-6 pt-6 border-t border-gray-200">
+      )}
+
+      {/* Add Product Section */}
+      {selectedClient && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Ajouter des produits</h2>
           <button
             onClick={handleOpenProductModal}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
@@ -410,10 +413,11 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
             <span>Ajouter Produit</span>
           </button>
         </div>
-      </div>
+      )}
 
       {/* Line Items */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      {selectedClient && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Articles</h2>
           
@@ -511,10 +515,12 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
             </div>
           </div>
         )}
-      </div>
+        </div>
+      )}
 
       {/* Notes */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      {selectedClient && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Notes</h2>
         <textarea
           value={invoice.notes}
@@ -523,7 +529,8 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
           placeholder="Notes additionnelles pour la facture..."
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
         />
-      </div>
+        </div>
+      )}
 
       {/* Product Selection Modal */}
       {showProductModal && (
