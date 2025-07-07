@@ -109,35 +109,15 @@ const OrderDetailPage: React.FC<OrderDetailPageProps> = ({ orderId, onBack }) =>
   };
 
   const getTaxPercentage = (taxClass: string) => {
-    // For zero tax or exonerated items
-    if (!taxClass || taxClass.toLowerCase().includes('exonerer') || taxClass.toLowerCase().includes('zero')) {
+    // Only convert "exonerer" to "0%", keep everything else as-is
+    if (!taxClass || taxClass.toLowerCase().includes('exonerer')) {
       return '0%';
     }
     
-    // Return the tax class as is for now - we'll calculate actual percentages below
+    // Return the tax class exactly as it comes from WooCommerce
     return taxClass;
   };
 
-  const calculateVATPercentage = (item: LineItem) => {
-    // If there's a calculated VAT rate, use it
-    if (item.calculated_vat_rate !== undefined && item.calculated_vat_rate !== null) {
-      return `${item.calculated_vat_rate}%`;
-    }
-    
-    // Calculate from actual tax data
-    if (item.subtotal > 0 && item.tax_total >= 0) {
-      const vatRate = (item.tax_total / item.subtotal) * 100;
-      return `${Math.round(vatRate * 100) / 100}%`;
-    }
-    
-    // Fallback based on tax class
-    if (!item.tax_class || item.tax_class.toLowerCase().includes('exonerer') || item.tax_class.toLowerCase().includes('zero')) {
-      return '0%';
-    }
-    
-    // Default fallback
-    return '20%';
-  };
 
   if (loading) {
     return (
@@ -265,7 +245,7 @@ const OrderDetailPage: React.FC<OrderDetailPageProps> = ({ orderId, onBack }) =>
                         {item.subtotal.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
                       </td>
                       <td className="border border-gray-300 px-4 py-3 text-center text-sm text-gray-600">
-                        {calculateVATPercentage(item)}
+                        {getTaxPercentage(item.tax_class)}
                       </td>
                       <td className="border border-gray-300 px-4 py-3 text-right text-sm text-gray-900">
                         {item.tax_total.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
