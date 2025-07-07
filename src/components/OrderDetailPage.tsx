@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 interface OrderDetail {
   order_id: string;
@@ -104,9 +104,6 @@ const OrderDetailPage: React.FC<OrderDetailPageProps> = ({ orderId, onBack }) =>
     return order?.line_items?.reduce((sum, item) => sum + item.tax_total, 0) || 0;
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
 
   const getTaxPercentage = (taxClass: string) => {
     // Only convert "exonerer" to "0%", keep everything else as-is
@@ -178,13 +175,6 @@ const OrderDetailPage: React.FC<OrderDetailPageProps> = ({ orderId, onBack }) =>
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Retour aux ventes</span>
-        </button>
-        <button
-          onClick={handlePrint}
-          className="flex items-center space-x-2 px-4 py-2 bg-[#21522f] text-white rounded-lg hover:bg-[#1a4025] transition-colors duration-200"
-        >
-          <Printer className="w-4 h-4" />
-          <span>Imprimer</span>
         </button>
       </div>
 
