@@ -8,6 +8,7 @@ interface Product {
   price: string;
   regular_price: string;
   tax_class: string;
+  tax_rates?: any[];
   categories: Array<{
     id: number;
     name: string;
@@ -86,7 +87,7 @@ const InvoicePage: React.FC = () => {
 
   const addProductToInvoice = (product: Product) => {
     const unitPrice = parseFloat(product.regular_price || product.price || '0');
-    const vatPercentage = getVATPercentage(product.tax_class);
+    const vatPercentage = getVATPercentage(product.tax_class, product.tax_rates);
     const totalHT = unitPrice * 1;
     const vatAmount = totalHT * (vatPercentage / 100);
 
@@ -110,11 +111,32 @@ const InvoicePage: React.FC = () => {
     setShowProductModal(false);
   };
 
-  const getVATPercentage = (taxClass: string): number => {
+  const getVATPercentage = (taxClass: string, taxRates?: any[]): number => {
+    // If we have tax rates data from WooCommerce, use it
+    if (taxRates && taxRates.length > 0) {
+      // Find tax rate for this class
+      const matchingRate = taxRates.find(rate => 
+        rate.class === taxClass || 
+        (taxClass === '' && rate.class === 'standard') ||
+        (taxClass === 'standard' && rate.class === '')
+      );
+      
+      if (matchingRate) {
+        return parseFloat(matchingRate.rate || '0');
+      }
+    }
+
+    // Fallback logic for common tax classes
     if (!taxClass || taxClass.toLowerCase().includes('exonerer') || taxClass === 'zero-rate') {
       return 0;
     }
-    // Default VAT rate for Morocco
+    
+    // Check for reduced rate indicators
+    if (taxClass.toLowerCase().includes('reduced') || taxClass.toLowerCase().includes('reduit')) {
+      return 10; // Reduced VAT rate in Morocco
+    }
+    
+    // Default standard VAT rate for Morocco
     return 20;
   };
 
@@ -438,7 +460,7 @@ const InvoicePage: React.FC = () => {
                             })} DH
                           </p>
                           <p className="text-sm text-gray-500">
-                            TVA: {getVATPercentage(product.tax_class)}%
+                            TVA: {getVATPercentage(product.tax_class, product.tax_rates)}%
                           </p>
                         </div>
                       </div>

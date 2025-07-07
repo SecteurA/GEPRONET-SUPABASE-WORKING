@@ -80,6 +80,19 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Fetch tax rates from WooCommerce API to get actual VAT percentages
+    const taxRatesResponse = await fetch(`${settings.api_url}/taxes`, {
+      headers: {
+        'Authorization': `Basic ${wcAuth}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    let taxRates = [];
+    if (taxRatesResponse.ok) {
+      taxRates = await taxRatesResponse.json();
+    }
+
     const products = await wcResponse.json();
 
     // Transform products to include only necessary fields
@@ -94,6 +107,7 @@ Deno.serve(async (req: Request) => {
       stock_status: product.stock_status,
       manage_stock: product.manage_stock,
       stock_quantity: product.stock_quantity,
+      tax_rates: taxRates,
     }));
 
     return new Response(
