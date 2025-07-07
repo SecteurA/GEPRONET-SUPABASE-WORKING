@@ -144,7 +144,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId, onBack }) =>
       setError('');
       setSuccess('');
 
-      const { error: updateError } = await supabase
+      const { data: updatedQuote, error: updateError } = await supabase
         .from('quotes')
         .update({ 
           status: newStatus,
@@ -153,7 +153,8 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId, onBack }) =>
         .eq('id', quoteId);
 
       if (updateError) {
-        setError('Erreur lors de la mise à jour du statut');
+        console.error('Quote status update error:', updateError);
+        setError(`Erreur lors de la mise à jour du statut: ${updateError.message}`);
         return;
       }
 
@@ -165,7 +166,8 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId, onBack }) =>
       setTimeout(() => setSuccess(''), 3000);
 
     } catch (err) {
-      setError('Erreur lors de la mise à jour du statut');
+      console.error('Quote status update error:', err);
+      setError(`Erreur lors de la mise à jour du statut: ${err.message}`);
     } finally {
       setSaving(false);
     }
