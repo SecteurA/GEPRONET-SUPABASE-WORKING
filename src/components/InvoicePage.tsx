@@ -9,9 +9,10 @@ interface InvoicePageProps {
   preFilledData?: any;
   onClearPreFilled?: () => void;
   onGenerateDeliveryNote?: (deliveryNoteData: any) => void;
+  onGenerateReturnNote?: (returnNoteData: any) => void;
 }
 
-const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFilled, onGenerateDeliveryNote }) => {
+const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFilled, onGenerateDeliveryNote, onGenerateReturnNote }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
@@ -47,6 +48,13 @@ const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFill
     }
   };
 
+  const handleGenerateReturnNote = (returnNoteData: any) => {
+    // Pass the return note data to parent component for navigation
+    if (onGenerateReturnNote) {
+      onGenerateReturnNote(returnNoteData);
+    }
+  };
+
   switch (viewMode) {
     case 'form':
       return <InvoiceFormPage onBack={handleBackToList} preFilledData={preFilledData} />;
@@ -58,6 +66,7 @@ const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFill
           onCreateNew={handleCreateNew}
           onViewInvoice={handleViewInvoice}
           onGenerateDeliveryNote={handleGenerateDeliveryNote}
+          onGenerateReturnNote={handleGenerateReturnNote}
         />
       );
   }

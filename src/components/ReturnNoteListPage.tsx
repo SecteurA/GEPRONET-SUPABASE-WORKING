@@ -1,87 +1,83 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Search, ChevronLeft, ChevronRight, Plus, Eye, Edit, FileText, Truck, RotateCcw } from 'lucide-react';
+import { RefreshCw, Search, ChevronLeft, ChevronRight, Plus, Eye, RotateCcw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
-interface Invoice {
+interface ReturnNote {
   id: string;
-  invoice_number: string;
+  return_note_number: string;
+  invoice_id: string;
   customer_name: string;
   customer_email: string;
   customer_phone: string;
   customer_address: string;
-  invoice_date: string;
-  due_date: string | null;
+  return_date: string;
   status: string;
-  subtotal_ht: number;
-  total_vat: number;
-  total_ttc: number;
+  reason: string;
   notes: string;
   created_at: string;
   updated_at: string;
 }
 
-interface InvoiceListPageProps {
+interface ReturnNoteListPageProps {
   onCreateNew: () => void;
-  onViewInvoice: (invoiceId: string) => void;
-  onGenerateDeliveryNote?: (invoice: Invoice) => void;
-  onGenerateReturnNote?: (invoice: Invoice) => void;
+  onViewReturnNote: (returnNoteId: string) => void;
 }
 
-const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewInvoice, onGenerateDeliveryNote, onGenerateReturnNote }) => {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+const ReturnNoteListPage: React.FC<ReturnNoteListPageProps> = ({ onCreateNew, onViewReturnNote }) => {
+  const [returnNotes, setReturnNotes] = useState<ReturnNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState<keyof Invoice>('created_at');
+  const [sortField, setSortField] = useState<keyof ReturnNote>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState('');
 
-  const invoicesPerPage = 20;
+  const returnNotesPerPage = 20;
 
   useEffect(() => {
-    fetchInvoices();
+    fetchReturnNotes();
   }, [currentPage, sortField, sortDirection, searchTerm]);
 
-  const fetchInvoices = async () => {
+  const fetchReturnNotes = async () => {
     try {
       setLoading(true);
       setError('');
 
       let query = supabase
-        .from('invoices')
+        .from('return_notes')
         .select('*', { count: 'exact' });
 
       // Apply search filter
       if (searchTerm) {
-        query = query.or(`customer_name.ilike.%${searchTerm}%,invoice_number.ilike.%${searchTerm}%,customer_email.ilike.%${searchTerm}%`);
+        query = query.or(`customer_name.ilike.%${searchTerm}%,return_note_number.ilike.%${searchTerm}%,customer_email.ilike.%${searchTerm}%`);
       }
 
       // Apply sorting
       query = query.order(sortField, { ascending: sortDirection === 'asc' });
 
       // Apply pagination
-      const from = (currentPage - 1) * invoicesPerPage;
-      const to = from + invoicesPerPage - 1;
+      const from = (currentPage - 1) * returnNotesPerPage;
+      const to = from + returnNotesPerPage - 1;
       query = query.range(from, to);
 
       const { data, error: fetchError, count } = await query;
 
       if (fetchError) {
-        setError('Erreur lors du chargement des factures');
+        setError('Erreur lors du chargement des bons de retour');
         return;
       }
 
-      setInvoices(data || []);
-      setTotalPages(Math.ceil((count || 0) / invoicesPerPage));
+      setReturnNotes(data || []);
+      setTotalPages(Math.ceil((count || 0) / returnNotesPerPage));
     } catch (err) {
-      setError('Erreur lors du chargement des factures');
+      setError('Erreur lors du chargement des bons de retour');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSort = (field: keyof Invoice) => {
+  const handleSort = (field: keyof ReturnNote) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -101,14 +97,12 @@ const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewIn
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'paid':
+      case 'processed':
         return 'bg-green-100 text-green-800';
-      case 'sent':
-        return 'bg-blue-100 text-blue-800';
-      case 'overdue':
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'rejected':
         return 'bg-red-100 text-red-800';
-      case 'draft':
-        return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -116,105 +110,14 @@ const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewIn
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'paid':
-        return 'Payée';
-      case 'sent':
-        return 'Envoyée';
-      case 'overdue':
-        return 'En retard';
-      case 'draft':
-        return 'Brouillon';
+      case 'processed':
+        return 'Traité';
+      case 'pending':
+        return 'En attente';
+      case 'rejected':
+        return 'Rejeté';
       default:
         return status;
-    }
-  };
-
-  const handleGenerateDeliveryNote = async (invoice: Invoice) => {
-    try {
-      // Don't show any loading states, just prepare the data and navigate
-      
-      // Fetch invoice details including line items
-      const { data: lineItems, error: lineItemsError } = await supabase
-        .from('invoice_line_items')
-        .select('*')
-        .eq('invoice_id', invoice.id)
-        .order('created_at', { ascending: true });
-
-      if (lineItemsError) {
-        console.error('Error loading invoice line items:', lineItemsError);
-        return;
-      }
-
-      // Transform invoice data to delivery note format
-      const deliveryNoteData = {
-        invoice_id: invoice.id,
-        customer_name: invoice.customer_name,
-        customer_email: invoice.customer_email,
-        customer_phone: invoice.customer_phone,
-        customer_address: invoice.customer_address,
-        delivery_date: new Date().toISOString().split('T')[0],
-        notes: `Bon de livraison généré à partir de la facture ${invoice.invoice_number}`,
-        line_items: (lineItems || []).map((item: any) => ({
-          product_id: item.product_id,
-          product_sku: item.product_sku || '',
-          product_name: item.product_name,
-          quantity: item.quantity,
-        })),
-      };
-
-      // Call parent callback if provided
-      if (onGenerateDeliveryNote) {
-        onGenerateDeliveryNote(deliveryNoteData);
-      }
-
-    } catch (err) {
-      console.error('Error preparing delivery note data:', err);
-    }
-  };
-
-  const handleGenerateReturnNote = async (invoice: Invoice) => {
-    try {
-      // Fetch invoice details including line items
-      const { data: lineItems, error: lineItemsError } = await supabase
-        .from('invoice_line_items')
-        .select('*')
-        .eq('invoice_id', invoice.id)
-        .order('created_at', { ascending: true });
-
-      if (lineItemsError) {
-        console.error('Error loading invoice line items:', lineItemsError);
-        return;
-      }
-
-      // Transform invoice data to return note format
-      const returnNoteData = {
-        invoice_id: invoice.id,
-        customer_name: invoice.customer_name,
-        customer_email: invoice.customer_email,
-        customer_phone: invoice.customer_phone,
-        customer_address: invoice.customer_address,
-        return_date: new Date().toISOString().split('T')[0],
-        reason: '',
-        notes: `Bon de retour généré à partir de la facture ${invoice.invoice_number}`,
-        line_items: (lineItems || []).map((item: any) => ({
-          id: `return-${item.id}`,
-          product_id: item.product_id,
-          product_sku: item.product_sku || '',
-          product_name: item.product_name,
-          quantity_returned: 0, // User will select quantity to return
-          max_quantity: item.quantity,
-          unit_price_ht: item.unit_price_ht,
-          total_ht: 0, // Will be calculated based on quantity_returned
-        })),
-      };
-
-      // Call parent callback if provided
-      if (onGenerateReturnNote) {
-        onGenerateReturnNote(returnNoteData);
-      }
-
-    } catch (err) {
-      console.error('Error preparing return note data:', err);
     }
   };
 
@@ -223,8 +126,8 @@ const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewIn
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Factures</h1>
-          <p className="text-gray-600">Gestion des factures</p>
+          <h1 className="text-2xl font-bold text-gray-900">Bons de Retour</h1>
+          <p className="text-gray-600">Gestion des bons de retour</p>
         </div>
         <div className="flex space-x-3">
           <button
@@ -232,7 +135,7 @@ const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewIn
             className="flex items-center space-x-2 px-4 py-2 bg-[#21522f] text-white rounded-lg hover:bg-[#1a4025] transition-colors duration-200"
           >
             <Plus className="w-4 h-4" />
-            <span>Nouvelle Facture</span>
+            <span>Nouveau Bon de Retour</span>
           </button>
         </div>
       </div>
@@ -261,7 +164,7 @@ const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewIn
         </div>
       </div>
 
-      {/* Invoices Table */}
+      {/* Return Notes Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -269,19 +172,19 @@ const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewIn
               <tr>
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('invoice_number')}
+                  onClick={() => handleSort('return_note_number')}
                 >
-                  N° Facture
-                  {sortField === 'invoice_number' && (
+                  N° Bon de Retour
+                  {sortField === 'return_note_number' && (
                     <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                   )}
                 </th>
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('invoice_date')}
+                  onClick={() => handleSort('return_date')}
                 >
                   Date
-                  {sortField === 'invoice_date' && (
+                  {sortField === 'return_date' && (
                     <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                   )}
                 </th>
@@ -296,10 +199,10 @@ const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewIn
                 </th>
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('due_date')}
+                  onClick={() => handleSort('reason')}
                 >
-                  Échéance
-                  {sortField === 'due_date' && (
+                  Motif
+                  {sortField === 'reason' && (
                     <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                   )}
                 </th>
@@ -312,15 +215,6 @@ const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewIn
                     <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                   )}
                 </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('total_ttc')}
-                >
-                  Total TTC (DH)
-                  {sortField === 'total_ttc' && (
-                    <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                  )}
-                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -329,89 +223,63 @@ const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewIn
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                     <div className="flex justify-center items-center space-x-2">
                       <RefreshCw className="w-5 h-5 animate-spin" />
                       <span>Chargement...</span>
                     </div>
                   </td>
                 </tr>
-              ) : invoices.length === 0 ? (
+              ) : returnNotes.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                     <div className="flex flex-col items-center space-y-2">
-                      <FileText className="w-12 h-12 text-gray-300" />
-                      <p>Aucune facture trouvée</p>
-                      <p className="text-sm">Créez votre première facture pour commencer</p>
+                      <RotateCcw className="w-12 h-12 text-gray-300" />
+                      <p>Aucun bon de retour trouvé</p>
+                      <p className="text-sm">Les bons de retour seront créés à partir des factures</p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                invoices.map((invoice) => (
+                returnNotes.map((returnNote) => (
                   <tr 
-                    key={invoice.id} 
+                    key={returnNote.id} 
                     className="hover:bg-gray-50 cursor-pointer transition-colors duration-200"
-                    onClick={() => onViewInvoice(invoice.id)}
+                    onClick={() => onViewReturnNote(returnNote.id)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {invoice.invoice_number}
+                      {returnNote.return_note_number}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(invoice.invoice_date)}
+                      {formatDate(returnNote.return_date)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{invoice.customer_name}</div>
-                        {invoice.customer_email && (
-                          <div className="text-sm text-gray-500">{invoice.customer_email}</div>
+                        <div className="text-sm font-medium text-gray-900">{returnNote.customer_name}</div>
+                        {returnNote.customer_email && (
+                          <div className="text-sm text-gray-500">{returnNote.customer_email}</div>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {invoice.due_date ? formatDate(invoice.due_date) : '-'}
+                      {returnNote.reason || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(invoice.status)}`}>
-                        {getStatusText(invoice.status)}
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(returnNote.status)}`}>
+                        {getStatusText(returnNote.status)}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {invoice.total_ttc.toLocaleString('fr-FR', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })} DH
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            onViewInvoice(invoice.id);
+                            onViewReturnNote(returnNote.id);
                           }}
                           className="text-indigo-600 hover:text-indigo-900 transition-colors duration-200"
-                          title="Voir la facture"
+                          title="Voir le bon de retour"
                         >
                           <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleGenerateDeliveryNote(invoice);
-                          }}
-                          className="text-green-600 hover:text-green-900 transition-colors duration-200"
-                          title="Générer bon de livraison"
-                        >
-                          <Truck className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleGenerateReturnNote(invoice);
-                          }}
-                          className="text-orange-600 hover:text-orange-900 transition-colors duration-200"
-                          title="Générer bon de retour"
-                        >
-                          <RotateCcw className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -455,4 +323,4 @@ const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewIn
   );
 };
 
-export default InvoiceListPage;
+export default ReturnNoteListPage;
