@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Printer, Download } from 'lucide-react';
+import { ArrowLeft, Printer, Save } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface InvoiceLineItem {
@@ -42,6 +42,10 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [editingStatus, setEditingStatus] = useState(false);
+  const [newStatus, setNewStatus] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     fetchInvoiceDetail();
@@ -79,6 +83,7 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
         ...invoiceData,
         line_items: lineItems || []
       });
+      setNewStatus(invoiceData.status);
     } catch (err) {
       setError('Erreur lors du chargement de la facture');
     } finally {
@@ -96,6 +101,79 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return 'Payée';
+      case 'sent':
+        return 'Envoyée';
+      case 'overdue':
+        return 'En retard';
+      case 'draft':
+        return 'Brouillon';
+      default:
+        return status;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return 'bg-green-100 text-green-800';
+      case 'sent':
+        return 'bg-blue-100 text-blue-800';
+      case 'overdue':
+        return 'bg-red-100 text-red-800';
+      case 'draft':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const handleStatusSave = async () => {
+    if (!invoice || newStatus === invoice.status) {
+      setEditingStatus(false);
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError('');
+      setSuccess('');
+
+      const { error: updateError } = await supabase
+        .from('invoices')
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', invoiceId);
+
+      if (updateError) {
+        setError('Erreur lors de la mise à jour du statut');
+        return;
+      }
+
+      setInvoice(prev => prev ? { ...prev, status: newStatus } : null);
+      setEditingStatus(false);
+      setSuccess('Statut mis à jour avec succès');
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000);
+
+    } catch (err) {
+      setError('Erreur lors de la mise à jour du statut');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleStatusCancel = () => {
+    setNewStatus(invoice?.status || '');
+    setEditingStatus(false);
   };
 
   if (loading) {
@@ -130,6 +208,18 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
 
   return (
     <div className="space-y-6">
+      {/* Messages */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 print:hidden">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-700 print:hidden">
+          {success}
+        </div>
+      )}
+
       {/* Header Actions */}
       <div className="flex items-center justify-between print:hidden">
         <button
@@ -169,6 +259,48 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
               {invoice.due_date && (
                 <p className="text-sm text-gray-600">Échéance: {formatDate(invoice.due_date)}</p>
               )}
+              <div className="mt-2">
+                {editingStatus ? (
+                  <div className="flex items-center space-x-2 print:hidden">
+                    <select
+                      value={newStatus}
+                      onChange={(e) => setNewStatus(e.target.value)}
+                      className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
+                    >
+                      <option value="draft">Brouillon</option>
+                      <option value="sent">Envoyée</option>
+                      <option value="paid">Payée</option>
+                      <option value="overdue">En retard</option>
+                    </select>
+                    <button
+                      onClick={handleStatusSave}
+                      disabled={saving}
+                      className="flex items-center space-x-1 px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50"
+                    >
+                      <Save className="w-3 h-3" />
+                      <span>{saving ? '...' : 'OK'}</span>
+                    </button>
+                    <button
+                      onClick={handleStatusCancel}
+                      className="px-2 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(invoice.status)}`}>
+                      {getStatusText(invoice.status)}
+                    </span>
+                    <button
+                      onClick={() => setEditingStatus(true)}
+                      className="text-xs text-blue-600 hover:text-blue-800 print:hidden"
+                    >
+                      Modifier
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
