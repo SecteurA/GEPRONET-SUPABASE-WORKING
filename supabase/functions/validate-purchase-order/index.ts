@@ -52,6 +52,25 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Check if the purchase order is already completed
+    const { data: purchaseOrderData, error: purchaseOrderError } = await supabase
+      .from('purchase_orders')
+      .select('status')
+      .eq('id', purchase_order_id)
+      .single();
+
+    if (purchaseOrderError) {
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch purchase order' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    const alreadyCompleted = purchaseOrderData.status === 'completed';
+
     // Update received quantities in database
     const updatePromises = received_items.map(item => 
       supabase
@@ -77,89 +96,100 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Get WooCommerce settings
-    const { data: wcSettings, error: wcSettingsError } = await supabase
-      .from('wc_settings')
-      .select('*')
-      .single();
-
-    if (!wcSettings || wcSettingsError) {
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'Purchase order updated but WooCommerce settings not found. Stock not updated.',
-          stock_updated: false
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    // Update WooCommerce inventory
-    const wcAuth = btoa(`${wcSettings.consumer_key}:${wcSettings.consumer_secret}`);
     let stockUpdateCount = 0;
     let stockUpdateErrors = 0;
+    
+    // Only update WooCommerce stock if the order wasn't already completed
+    if (!alreadyCompleted) {
+      // Get WooCommerce settings
+      const { data: wcSettings, error: wcSettingsError } = await supabase
+        .from('wc_settings')
+        .select('*')
+        .single();
 
-    for (const receivedItem of received_items) {
-      if (receivedItem.quantity_received > 0) {
-        try {
-          // Get the line item details to find product_id
-          const { data: lineItem, error: lineItemError } = await supabase
-            .from('purchase_order_line_items')
-            .select('product_id, product_name')
-            .eq('id', receivedItem.id)
-            .single();
-
-          if (lineItemError || !lineItem) {
-            console.error('Failed to get line item:', lineItemError);
-            stockUpdateErrors++;
-            continue;
+      if (!wcSettings || wcSettingsError) {
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'Purchase order updated but WooCommerce settings not found. Stock not updated.',
+            stock_updated: false
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           }
+        );
+      }
 
-          // Get current product data from WooCommerce
-          const productResponse = await fetch(`${wcSettings.api_url}/products/${lineItem.product_id}`, {
-            headers: {
-              'Authorization': `Basic ${wcAuth}`,
-              'Content-Type': 'application/json',
-            },
-          });
+      // Update WooCommerce inventory
+      const wcAuth = btoa(`${wcSettings.consumer_key}:${wcSettings.consumer_secret}`);
 
-          if (productResponse.ok) {
-            const product = await productResponse.json();
+      for (const receivedItem of received_items) {
+        if (receivedItem.quantity_received > 0) {
+          try {
+            // Get the line item details to find product_id
+            const { data: lineItem, error: lineItemError } = await supabase
+              .from('purchase_order_line_items')
+              .select('product_id, product_name, quantity_received')
+              .eq('id', receivedItem.id)
+              .single();
+
+            if (lineItemError || !lineItem) {
+              console.error('Failed to get line item:', lineItemError);
+              stockUpdateErrors++;
+              continue;
+            }
+
+            // Calculate the difference in received quantity to only add the new units
+            const previouslyReceived = lineItem.quantity_received || 0;
+            const newUnits = receivedItem.quantity_received - previouslyReceived;
             
-            // Only update stock if product manages stock
-            if (product.manage_stock) {
-              const currentStock = parseInt(product.stock_quantity || 0);
-              const newStockQuantity = currentStock + receivedItem.quantity_received;
-              
-              // Update product stock in WooCommerce
-              const updateResponse = await fetch(`${wcSettings.api_url}/products/${lineItem.product_id}`, {
-                method: 'PUT',
+            // Only proceed if there are new units to add
+            if (newUnits > 0) {
+              // Get current product data from WooCommerce
+              const productResponse = await fetch(`${wcSettings.api_url}/products/${lineItem.product_id}`, {
                 headers: {
                   'Authorization': `Basic ${wcAuth}`,
                   'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                  stock_quantity: newStockQuantity,
-                }),
               });
 
-              if (updateResponse.ok) {
-                stockUpdateCount++;
+              if (productResponse.ok) {
+                const product = await productResponse.json();
+                
+                // Only update stock if product manages stock
+                if (product.manage_stock) {
+                  const currentStock = parseInt(product.stock_quantity || 0);
+                  const newStockQuantity = currentStock + newUnits;
+                  
+                  // Update product stock in WooCommerce
+                  const updateResponse = await fetch(`${wcSettings.api_url}/products/${lineItem.product_id}`, {
+                    method: 'PUT',
+                    headers: {
+                      'Authorization': `Basic ${wcAuth}`,
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      stock_quantity: newStockQuantity,
+                    }),
+                  });
+
+                  if (updateResponse.ok) {
+                    stockUpdateCount++;
+                  } else {
+                    console.error(`Failed to update stock for product ${lineItem.product_id}`);
+                    stockUpdateErrors++;
+                  }
+                }
               } else {
-                console.error(`Failed to update stock for product ${lineItem.product_id}`);
+                console.error(`Failed to get product ${lineItem.product_id} from WooCommerce`);
                 stockUpdateErrors++;
               }
             }
-          } else {
-            console.error(`Failed to get product ${lineItem.product_id} from WooCommerce`);
+          } catch (stockError) {
+            console.error(`Stock update error for item ${receivedItem.id}:`, stockError);
             stockUpdateErrors++;
           }
-        } catch (stockError) {
-          console.error(`Stock update error for item ${receivedItem.id}:`, stockError);
-          stockUpdateErrors++;
         }
       }
     }
@@ -199,10 +229,13 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Purchase order validated and inventory updated',
-        stock_updated: stockUpdateCount > 0,
+        message: alreadyCompleted
+          ? 'Quantités mises à jour mais inventaire inchangé car le bon de commande est déjà terminé'
+          : 'Bon de commande validé et inventaire mis à jour',
+        stock_updated: !alreadyCompleted && stockUpdateCount > 0,
         stock_update_count: stockUpdateCount,
         stock_update_errors: stockUpdateErrors,
+        already_completed: alreadyCompleted,
       }),
       {
         status: 200,
