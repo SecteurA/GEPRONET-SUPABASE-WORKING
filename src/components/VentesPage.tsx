@@ -207,7 +207,38 @@ const VentesPage: React.FC<VentesPageProps> = ({ onGenerateInvoice }) => {
             return taxClass;
           };
           
+          // Convert tax class to numeric percentage for database storage
+          const getTaxPercentageNumeric = (taxClass: string): number => {
+            if (!taxClass || taxClass.toLowerCase().includes('exonerer')) {
+              return 0;
+            }
+            
+            // Handle percentage strings like "20%" or "10%"
+            const percentageMatch = taxClass.match(/(\d+(?:\.\d+)?)\s*%/);
+            if (percentageMatch) {
+              return parseFloat(percentageMatch[1]);
+            }
+            
+            // Handle common WooCommerce tax class names
+            const normalizedTaxClass = taxClass.toLowerCase().trim();
+            switch (normalizedTaxClass) {
+              case 'standard':
+                return 20; // Standard VAT rate in Morocco
+              case 'reduced-rate':
+              case 'reduced':
+                return 10; // Reduced VAT rate
+              case 'zero-rate':
+              case 'zero':
+                return 0;
+              default:
+                // Try to extract number from string
+                const numberMatch = taxClass.match(/(\d+(?:\.\d+)?)/);
+                return numberMatch ? parseFloat(numberMatch[1]) : 0;
+            }
+          };
+          
           const displayedTaxClass = getTaxPercentageDisplay(item.tax_class || '');
+          const numericVatPercentage = getTaxPercentageNumeric(item.tax_class || '');
           
           // Use subtotal as HT price (WooCommerce subtotal is before tax)
           const totalHT = item.subtotal;
@@ -222,7 +253,7 @@ const VentesPage: React.FC<VentesPageProps> = ({ onGenerateInvoice }) => {
             quantity: item.quantity,
             unit_price_ht: unitPriceHT,
             total_ht: totalHT,
-            vat_percentage: displayedTaxClass, // Use the same display format as order view
+            vat_percentage: numericVatPercentage, // Use numeric value for database
             vat_amount: vatAmount,
           };
         }),
