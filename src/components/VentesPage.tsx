@@ -196,9 +196,8 @@ const VentesPage: React.FC<VentesPageProps> = ({ onGenerateInvoice }) => {
         due_date: '',
         notes: `Facture générée à partir de la commande #${order.order_number}`,
         line_items: (orderDetail.line_items || []).map((item: any, index: number) => {
-          // Calculate VAT percentage from tax data
-          const vatPercentage = item.calculated_vat_rate || 
-            (item.tax_total > 0 && item.subtotal > 0 ? (item.tax_total / item.subtotal) * 100 : 0);
+          // Preserve original tax class from order (don't calculate VAT percentage)
+          const originalTaxClass = item.tax_class || '';
           
           // Use subtotal as HT price (WooCommerce subtotal is before tax)
           const totalHT = item.subtotal;
@@ -213,7 +212,7 @@ const VentesPage: React.FC<VentesPageProps> = ({ onGenerateInvoice }) => {
             quantity: item.quantity,
             unit_price_ht: unitPriceHT,
             total_ht: totalHT,
-            vat_percentage: Math.round(vatPercentage * 100) / 100,
+            vat_percentage: originalTaxClass, // Keep original tax class instead of calculated percentage
             vat_amount: vatAmount,
           };
         }),

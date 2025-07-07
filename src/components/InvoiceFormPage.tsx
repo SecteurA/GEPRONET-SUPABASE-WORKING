@@ -23,7 +23,7 @@ interface InvoiceLineItem {
   quantity: number;
   unit_price_ht: number;
   total_ht: number;
-  vat_percentage: number;
+  vat_percentage: string | number; // Can be tax class string or numeric percentage
   vat_amount: number;
 }
 
@@ -453,7 +453,7 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
                         {item.total_ht.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
                       </td>
                       <td className="border border-gray-300 px-4 py-3 text-center text-sm text-gray-600">
-                        {item.vat_percentage}%
+                        {typeof item.vat_percentage === 'string' ? item.vat_percentage : `${item.vat_percentage}%`}
                       </td>
                       <td className="border border-gray-300 px-4 py-3 text-right text-sm text-gray-900">
                         {item.vat_amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
