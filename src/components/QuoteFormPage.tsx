@@ -109,7 +109,7 @@ const QuoteFormPage: React.FC<QuoteFormPageProps> = ({ onBack, preFilledData, on
 
   // Debounced search function
   const fetchProducts = async (searchTerm: string) => {
-    if (searchTerm.length < 3) {
+    if (searchTerm.length < 2) {
       setProducts([]);
       return;
     }
@@ -568,9 +568,10 @@ const QuoteFormPage: React.FC<QuoteFormPageProps> = ({ onBack, preFilledData, on
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Tapez au moins 3 caractères pour rechercher..."
+                  placeholder="Tapez au moins 2 caractères pour rechercher..."
                   value={productSearch}
                   onChange={(e) => handleSearchChange(e.target.value)}
+                  autoFocus
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
                 />
               </div>
@@ -585,12 +586,12 @@ const QuoteFormPage: React.FC<QuoteFormPageProps> = ({ onBack, preFilledData, on
               ) : !searchTouched ? (
                 <div className="text-center py-8 text-gray-500">
                   <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <p>Tapez au moins 3 caractères pour rechercher des produits</p>
+                  <p>Tapez au moins 2 caractères pour rechercher des produits</p>
                   <p className="text-sm mt-2">Recherche par nom ou référence (SKU)</p>
                 </div>
-              ) : productSearch.length < 3 ? (
+              ) : productSearch.length < 2 ? (
                 <div className="text-center py-8 text-gray-500">
-                  <p>Tapez au moins 3 caractères pour lancer la recherche</p>
+                  <p>Tapez au moins 2 caractères pour lancer la recherche</p>
                 </div>
               ) : products.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4">
