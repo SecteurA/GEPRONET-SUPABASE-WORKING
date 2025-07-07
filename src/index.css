@@ -217,15 +217,31 @@
   .border,
   .border-gray-200,
   .border-gray-300 {
-    border: 1px solid #ccc !important;
+    border: none !important;
   }
   
   .border-t {
-    border-top: 1px solid #ccc !important;
+    border-top: none !important;
   }
   
   .border-b {
-    border-bottom: 1px solid #ccc !important;
+    border-bottom: none !important;
+  }
+  
+  /* Hide rounded corners and shadows for cleaner print */
+  .rounded-lg,
+  .rounded-md,
+  .rounded {
+    border-radius: 0 !important;
+    border: none !important;
+  }
+  
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg,
+  .shadow-xl {
+    box-shadow: none !important;
+    border: none !important;
   }
   
   /* Ensure proper margin and padding for print layout */
