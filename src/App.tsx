@@ -12,6 +12,7 @@ import DeliveryNotePage from './components/DeliveryNotePage';
 import ReturnNotePage from './components/ReturnNotePage';
 import QuotePage from './components/QuotePage';
 import SalesJournalPage from './components/SalesJournalPage';
+import SuppliersPage from './components/SuppliersPage';
 
 function App() {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -69,6 +70,8 @@ function App() {
           onClearPreFilled={() => setPreFilledQuoteData(null)}
           onGenerateInvoice={handleGenerateInvoiceFromQuote}
         />;
+      case 'fournisseurs':
+        return <SuppliersPage />;
       case 'settings':
         return <SettingsPage />;
       case 'clients':
