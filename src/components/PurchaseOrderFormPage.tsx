@@ -493,12 +493,11 @@ const PurchaseOrderFormPage: React.FC<PurchaseOrderFormPageProps> = ({ onBack, p
                   ))}
                 </div>
               ) : (
-                type="text" 
-                placeholder="Tapez au moins 2 caractères pour rechercher..."
+                <div className="text-center py-8 text-gray-500">
+                  <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                   <p>Aucun produit trouvé pour "{productSearch}"</p>
                   <p className="text-sm mt-2">Essayez avec d'autres mots-clés</p>
-                autoFocus
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"                
+                </div>
               )}
             </div>
           </div>
