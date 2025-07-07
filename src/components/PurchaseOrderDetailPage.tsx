@@ -247,12 +247,6 @@ const PurchaseOrderDetailPage: React.FC<PurchaseOrderDetailPageProps> = ({ purch
     return purchaseOrder.status === 'completed';
   };
 
-  // Check if order is already completed to prevent re-validation
-  const isCompleted = () => {
-    if (!purchaseOrder) return false;
-    return purchaseOrder.status === 'completed';
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -316,11 +310,6 @@ const PurchaseOrderDetailPage: React.FC<PurchaseOrderDetailPageProps> = ({ purch
               <CheckCircle className="w-4 h-4" />
               <span>{validating ? 'Validation...' : 'Valider Réception'}</span>
             </button>
-          )}
-          {hasChanges() && isCompleted() && (
-            <div className="flex items-center bg-yellow-50 text-yellow-800 px-4 py-2 rounded-lg border border-yellow-200">
-              <span className="text-sm">Le bon de commande est déjà terminé</span>
-            </div>
           )}
           {hasChanges() && isCompleted() && (
             <div className="flex items-center bg-yellow-50 text-yellow-800 px-4 py-2 rounded-lg border border-yellow-200">
