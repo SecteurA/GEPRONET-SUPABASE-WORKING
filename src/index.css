@@ -41,7 +41,7 @@
   
   /* Configure page settings to minimize browser headers/footers */
   @page {
-    margin: 0.5in 0.5in 0.5in 0.5in;
+    margin: 30px;
     size: A4;
   }
   
