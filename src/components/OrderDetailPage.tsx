@@ -27,6 +27,7 @@ interface LineItem {
   subtotal: number;
   tax_total: number;
   tax_class: string;
+  calculated_vat_rate?: number;
 }
 
 interface OrderDetailPageProps {
@@ -108,22 +109,34 @@ const OrderDetailPage: React.FC<OrderDetailPageProps> = ({ orderId, onBack }) =>
   };
 
   const getTaxPercentage = (taxClass: string) => {
-    if (!taxClass || taxClass.toLowerCase() === 'exonerer' || taxClass.toLowerCase() === 'zero-rate' || taxClass.toLowerCase() === 'zero_rate') {
+    // For zero tax or exonerated items
+    if (!taxClass || taxClass.toLowerCase().includes('exonerer') || taxClass.toLowerCase().includes('zero')) {
       return '0%';
     }
     
-    // Map common tax classes to percentages
-    const taxMapping: { [key: string]: string } = {
-      'standard': '20%',
-      'reduced-rate': '10%',
-      'reduced_rate': '10%',
-      'zero-rate': '0%',
-      'zero_rate': '0%',
-      'exonerer': '0%',
-    };
+    // Return the tax class as is for now - we'll calculate actual percentages below
+    return taxClass;
+  };
+
+  const calculateVATPercentage = (item: LineItem) => {
+    // If there's a calculated VAT rate, use it
+    if (item.calculated_vat_rate !== undefined && item.calculated_vat_rate !== null) {
+      return `${item.calculated_vat_rate}%`;
+    }
     
-    const normalizedClass = taxClass.toLowerCase().replace(/[_\s]/g, '-');
-    return taxMapping[normalizedClass] || '20%';
+    // Calculate from actual tax data
+    if (item.subtotal > 0 && item.tax_total >= 0) {
+      const vatRate = (item.tax_total / item.subtotal) * 100;
+      return `${Math.round(vatRate * 100) / 100}%`;
+    }
+    
+    // Fallback based on tax class
+    if (!item.tax_class || item.tax_class.toLowerCase().includes('exonerer') || item.tax_class.toLowerCase().includes('zero')) {
+      return '0%';
+    }
+    
+    // Default fallback
+    return '20%';
   };
 
   if (loading) {
@@ -252,7 +265,7 @@ const OrderDetailPage: React.FC<OrderDetailPageProps> = ({ orderId, onBack }) =>
                         {item.subtotal.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
                       </td>
                       <td className="border border-gray-300 px-4 py-3 text-center text-sm text-gray-600">
-                        {getTaxPercentage(item.tax_class)}
+                        {calculateVATPercentage(item)}
                       </td>
                       <td className="border border-gray-300 px-4 py-3 text-right text-sm text-gray-900">
                         {item.tax_total.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
