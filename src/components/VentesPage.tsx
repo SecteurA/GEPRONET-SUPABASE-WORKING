@@ -17,11 +17,17 @@ interface Order {
   order_date: string;
   created_at: string;
   updated_at: string;
-  onGenerateInvoice?: (orderData: any) => void;
+  invoice_id?: string;
+  invoice_number?: string;
+}
+
+interface VentesPageProps {
+  onGenerateInvoice: (orderData: any) => void;
 }
 
 const VentesPage: React.FC<VentesPageProps> = ({ onGenerateInvoice }) => {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersWithInvoices, setOrdersWithInvoices] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,10 +76,41 @@ const VentesPage: React.FC<VentesPageProps> = ({ onGenerateInvoice }) => {
 
       setOrders(data || []);
       setTotalPages(Math.ceil((count || 0) / ordersPerPage));
+      
+      // Fetch invoices for these orders
+      if (data && data.length > 0) {
+        await fetchOrderInvoices(data.map(order => order.order_id));
+      }
     } catch (err) {
       setError('Erreur lors du chargement des commandes');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchOrderInvoices = async (orderIds: string[]) => {
+    try {
+      const { data: invoices, error } = await supabase
+        .from('invoices')
+        .select('source_order_id, id, invoice_number')
+        .in('source_order_id', orderIds)
+        .not('source_order_id', 'is', null);
+
+      if (error) {
+        console.error('Error fetching order invoices:', error);
+        return;
+      }
+
+      const invoiceMap = new Set<string>();
+      invoices?.forEach(invoice => {
+        if (invoice.source_order_id) {
+          invoiceMap.add(invoice.source_order_id);
+        }
+      });
+
+      setOrdersWithInvoices(invoiceMap);
+    } catch (err) {
+      console.error('Error fetching order invoices:', err);
     }
   };
 
@@ -195,6 +232,8 @@ const VentesPage: React.FC<VentesPageProps> = ({ onGenerateInvoice }) => {
         invoice_date: new Date().toISOString().split('T')[0],
         due_date: '',
         notes: `Facture générée à partir de la commande #${order.order_number}`,
+        source_order_id: order.order_id,
+        source_type: 'order',
         line_items: (orderDetail.line_items || []).map((item: any, index: number) => {
           // Apply the same display logic as the order view for consistency
           const getTaxPercentageDisplay = (taxClass: string) => {
@@ -235,6 +274,26 @@ const VentesPage: React.FC<VentesPageProps> = ({ onGenerateInvoice }) => {
 
     } catch (err) {
       setError('Erreur lors de la génération de la facture');
+    }
+  };
+
+  const handleInvoiceAction = async (order: Order) => {
+    const hasInvoice = ordersWithInvoices.has(order.order_id);
+    
+    if (hasInvoice) {
+      // Find and open existing invoice
+      const { data: invoice, error } = await supabase
+        .from('invoices')
+        .select('id')
+        .eq('source_order_id', order.order_id)
+        .single();
+
+      if (invoice && !error) {
+        // Navigate to invoice detail page - we'll need to add this navigation
+        window.open(`#/invoice/${invoice.id}`, '_blank');
+      }
+    } else {
+      handleGenerateInvoice(order);
     }
   };
 
@@ -418,13 +477,19 @@ const VentesPage: React.FC<VentesPageProps> = ({ onGenerateInvoice }) => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleGenerateInvoice(order);
+                          handleInvoiceAction(order);
                         }}
-                        className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors duration-200"
-                        title="Générer une facture"
+                        className={`flex items-center space-x-1 px-3 py-1 text-white rounded transition-colors duration-200 ${
+                          ordersWithInvoices.has(order.order_id)
+                            ? 'bg-blue-600 hover:bg-blue-700'
+                            : 'bg-green-600 hover:bg-green-700'
+                        }`}
+                        title={ordersWithInvoices.has(order.order_id) ? 'Voir la facture' : 'Générer une facture'}
                       >
                         <FileText className="w-3 h-3" />
-                        <span className="text-xs">Facture</span>
+                        <span className="text-xs">
+                          {ordersWithInvoices.has(order.order_id) ? 'Voir' : 'Facture'}
+                        </span>
                       </button>
                     </td>
                   </tr>

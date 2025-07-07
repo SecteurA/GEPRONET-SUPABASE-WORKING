@@ -26,6 +26,8 @@ interface InvoiceData {
   due_date: string;
   notes: string;
   line_items: InvoiceLineItem[];
+  source_order_id?: string;
+  source_type?: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -123,6 +125,8 @@ Deno.serve(async (req: Request) => {
         total_vat: totalVAT,
         total_ttc: totalTTC,
         notes: invoiceData.notes || '',
+        source_order_id: invoiceData.source_order_id || null,
+        source_type: invoiceData.source_type || 'manual',
       })
       .select()
       .single();
