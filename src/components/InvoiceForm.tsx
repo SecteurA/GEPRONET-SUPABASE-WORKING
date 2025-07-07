@@ -260,36 +260,46 @@ const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, onBack, onEdit
 
         {/* Line Items Table */}
         <div className="mb-8">
-  const searchItems = async (searchTerm: string) => {
-    if (!searchTerm.trim() || searchTerm.length < 2) {
-      setSearchResults([]);
-      return;
-    }
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Articles</h3>
+          {lineItems.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Article</th>
+                    <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">SKU</th>
+                    <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Description</th>
+                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">Quantité</th>
+                    <th className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">Prix Unit.</th>
+                    <th className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lineItems.map((item, index) => (
+                    <tr key={item.id || index} className="hover:bg-gray-50">
+                      <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">{item.product_name}</td>
+                      <td className="border border-gray-300 px-4 py-3 text-sm text-gray-600">{item.product_sku || '-'}</td>
+                      <td className="border border-gray-300 px-4 py-3 text-sm text-gray-600">{item.description || '-'}</td>
+                      <td className="border border-gray-300 px-4 py-3 text-center text-sm text-gray-900">{item.quantity}</td>
+                      <td className="border border-gray-300 px-4 py-3 text-right text-sm text-gray-900">
+                        {item.unit_price.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DH
+                      </td>
+                      <td className="border border-gray-300 px-4 py-3 text-right text-sm text-gray-900">
+                        {item.total_price.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DH
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              Aucun article trouvé pour cette facture
+            </div>
+          )}
+        </div>
 
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wc-search-products`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ search: searchTerm }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        console.error('Error searching products:', result.error);
-        setSearchResults([]);
-        return;
-      }
-
-      setSearchResults(result.products || []);
-    } catch (err) {
-      console.error('Error searching products:', err);
-      setSearchResults([]);
-    }
-  };</action>
+        {/* Totals */}
         <div className="flex justify-end">
           <div className="w-80">
             <div className="border-t border-gray-300 pt-4">
