@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 interface OrderDetail {
   order_id: string;
@@ -27,6 +27,7 @@ interface LineItem {
   subtotal: number;
   tax_total: number;
   tax_class: string;
+  calculated_vat_rate?: number;
 }
 
 interface OrderDetailPageProps {
@@ -103,25 +104,17 @@ const OrderDetailPage: React.FC<OrderDetailPageProps> = ({ orderId, onBack }) =>
     return order?.line_items?.reduce((sum, item) => sum + item.tax_total, 0) || 0;
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
 
   const getTaxPercentage = (taxClass: string) => {
-    if (!taxClass || taxClass.toLowerCase() === 'exonerer') {
+    // Only convert "exonerer" to "0%", keep everything else as-is
+    if (!taxClass || taxClass.toLowerCase().includes('exonerer')) {
       return '0%';
     }
     
-    // Map common tax classes to percentages
-    const taxMapping: { [key: string]: string } = {
-      'standard': '20%',
-      'reduced-rate': '10%',
-      'zero-rate': '0%',
-    };
-    
-    const normalizedClass = taxClass.toLowerCase().replace(/[_\s]/g, '-');
-    return taxMapping[normalizedClass] || '20%';
+    // Return the tax class exactly as it comes from WooCommerce
+    return taxClass;
   };
+
 
   if (loading) {
     return (
@@ -182,13 +175,6 @@ const OrderDetailPage: React.FC<OrderDetailPageProps> = ({ orderId, onBack }) =>
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Retour aux ventes</span>
-        </button>
-        <button
-          onClick={handlePrint}
-          className="flex items-center space-x-2 px-4 py-2 bg-[#21522f] text-white rounded-lg hover:bg-[#1a4025] transition-colors duration-200"
-        >
-          <Printer className="w-4 h-4" />
-          <span>Imprimer</span>
         </button>
       </div>
 

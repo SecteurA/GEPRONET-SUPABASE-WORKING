@@ -41,12 +41,12 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => {
   const menuItems = [
     { id: 'ventes', icon: <ShoppingCart size={20} />, label: 'Ventes' },
-    { id: 'factures', icon: <Receipt size={20} />, label: 'Factures' },
     { id: 'devis', icon: <FileText size={20} />, label: 'Devis' },
+    { id: 'factures', icon: <Receipt size={20} />, label: 'Factures' },
     { id: 'journal', icon: <BookOpen size={20} />, label: 'Journal de vente' },
     { id: 'livraison', icon: <Truck size={20} />, label: 'Bon de Livraison' },
     { id: 'retour', icon: <RotateCcw size={20} />, label: 'Bon de retour' },
-    { id: 'commandes', icon: <ClipboardList size={20} />, label: 'Bon de commandes' },
+    { id: 'commandes', icon: <ClipboardList size={20} />, label: 'Bon de commande' },
     { id: 'fournisseurs', icon: <Users size={20} />, label: 'Fournisseurs' },
     { id: 'clients', icon: <UserCheck size={20} />, label: 'Clients' },
   ];

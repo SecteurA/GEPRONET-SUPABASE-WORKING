@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { RefreshCw, Search, ChevronLeft, ChevronRight, Download, Globe, CreditCard, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import OrderDetailPage from './OrderDetailPage';
-import InvoiceForm from './InvoiceForm';
 
 interface Order {
   order_id: string;
@@ -18,9 +17,10 @@ interface Order {
   order_date: string;
   created_at: string;
   updated_at: string;
+  onGenerateInvoice?: (orderData: any) => void;
 }
 
-const VentesPage: React.FC = () => {
+const VentesPage: React.FC<VentesPageProps> = ({ onGenerateInvoice }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -32,7 +32,6 @@ const VentesPage: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [convertingOrderId, setConvertingOrderId] = useState<string | null>(null);
 
   const ordersPerPage = 20;
 
@@ -164,16 +163,110 @@ const VentesPage: React.FC = () => {
 
   const handleBackToList = () => {
     setSelectedOrderId(null);
-    setConvertingOrderId(null);
   };
 
-  const handleConvertToInvoice = (orderId: string) => {
-    setConvertingOrderId(orderId);
-  };
+  const handleGenerateInvoice = async (order: Order) => {
+    try {
+      setError('');
+      
+      // Fetch order details including line items
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wc-order-detail`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ order_id: order.order_id }),
+      });
 
-  const handleInvoiceSubmitted = () => {
-    setConvertingOrderId(null);
-    setSuccess('Facture créée avec succès à partir de la commande');
+      const orderDetail = await response.json();
+
+      if (!response.ok) {
+        setError('Erreur lors du chargement des détails de la commande');
+        return;
+      }
+
+      // Transform order data to invoice format
+      const invoiceData = {
+        customer_name: order.customer_name,
+        customer_email: order.customer_email,
+        customer_phone: '',
+        customer_address: order.billing_address || order.shipping_address || '',
+        invoice_date: new Date().toISOString().split('T')[0],
+        due_date: '',
+        notes: `Facture générée à partir de la commande #${order.order_number}`,
+        line_items: (orderDetail.line_items || []).map((item: any, index: number) => {
+          // Apply the same display logic as the order view for consistency
+          const getTaxPercentageDisplay = (taxClass: string) => {
+            // Only convert "exonerer" to "0%", keep everything else as-is
+            if (!taxClass || taxClass.toLowerCase().includes('exonerer')) {
+              return '0%';
+            }
+            
+            // Return the tax class exactly as it comes from WooCommerce
+            return taxClass;
+          };
+          
+          // Convert tax class to numeric percentage for database storage
+          const getTaxPercentageNumeric = (taxClass: string): number => {
+            if (!taxClass || taxClass.toLowerCase().includes('exonerer')) {
+              return 0;
+            }
+            
+            // Handle percentage strings like "20%" or "10%"
+            const percentageMatch = taxClass.match(/(\d+(?:\.\d+)?)\s*%/);
+            if (percentageMatch) {
+              return parseFloat(percentageMatch[1]);
+            }
+            
+            // Handle common WooCommerce tax class names
+            const normalizedTaxClass = taxClass.toLowerCase().trim();
+            switch (normalizedTaxClass) {
+              case 'standard':
+                return 20; // Standard VAT rate in Morocco
+              case 'reduced-rate':
+              case 'reduced':
+                return 10; // Reduced VAT rate
+              case 'zero-rate':
+              case 'zero':
+                return 0;
+              default:
+                // Try to extract number from string
+                const numberMatch = taxClass.match(/(\d+(?:\.\d+)?)/);
+                return numberMatch ? parseFloat(numberMatch[1]) : 0;
+            }
+          };
+          
+          const displayedTaxClass = getTaxPercentageDisplay(item.tax_class || '');
+          const numericVatPercentage = getTaxPercentageNumeric(item.tax_class || '');
+          
+          // Use subtotal as HT price (WooCommerce subtotal is before tax)
+          const totalHT = item.subtotal;
+          const unitPriceHT = totalHT / item.quantity;
+          const vatAmount = item.tax_total;
+
+          return {
+            id: `order-${order.order_id}-${index}`,
+            product_id: item.product_id,
+            product_sku: item.product_sku || '',
+            product_name: item.product_name,
+            quantity: item.quantity,
+            unit_price_ht: unitPriceHT,
+            total_ht: totalHT,
+            vat_percentage: numericVatPercentage, // Use numeric value for database
+            vat_amount: vatAmount,
+          };
+        }),
+      };
+
+      // Call the parent function to navigate to invoice form with pre-filled data
+      if (onGenerateInvoice) {
+        onGenerateInvoice(invoiceData);
+      }
+
+    } catch (err) {
+      setError('Erreur lors de la génération de la facture');
+    }
   };
 
   // If an order is selected, show the detail view
@@ -182,18 +275,6 @@ const VentesPage: React.FC = () => {
       <OrderDetailPage 
         orderId={selectedOrderId} 
         onBack={handleBackToList}
-      />
-    );
-  }
-
-  // If converting an order to invoice, show the invoice form
-  if (convertingOrderId) {
-    return (
-      <InvoiceForm
-        invoice={null}
-        importOrderId={convertingOrderId}
-        onSubmit={handleInvoiceSubmitted}
-        onCancel={handleBackToList}
       />
     );
   }
@@ -311,7 +392,7 @@ const VentesPage: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                     <div className="flex justify-center items-center space-x-2">
                       <RefreshCw className="w-5 h-5 animate-spin" />
                       <span>Chargement...</span>
@@ -320,7 +401,7 @@ const VentesPage: React.FC = () => {
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                     Aucune commande trouvée
                   </td>
                 </tr>
@@ -368,13 +449,13 @@ const VentesPage: React.FC = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleConvertToInvoice(order.order_id);
+                          handleGenerateInvoice(order);
                         }}
-                        className="flex items-center space-x-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors duration-200"
-                        title="Convertir en facture"
+                        className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors duration-200"
+                        title="Générer une facture"
                       >
                         <FileText className="w-3 h-3" />
-                        <span>Facture</span>
+                        <span className="text-xs">Facture</span>
                       </button>
                     </td>
                   </tr>
