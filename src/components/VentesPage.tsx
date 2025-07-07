@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Search, ChevronLeft, ChevronRight, Download, Globe, CreditCard } from 'lucide-react';
+import { RefreshCw, Search, ChevronLeft, ChevronRight, Download, Globe, CreditCard, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import OrderDetailPage from './OrderDetailPage';
 
@@ -17,9 +17,10 @@ interface Order {
   order_date: string;
   created_at: string;
   updated_at: string;
+  onGenerateInvoice?: (orderData: any) => void;
 }
 
-const VentesPage: React.FC = () => {
+const VentesPage: React.FC<VentesPageProps> = ({ onGenerateInvoice }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -164,6 +165,70 @@ const VentesPage: React.FC = () => {
     setSelectedOrderId(null);
   };
 
+  const handleGenerateInvoice = async (order: Order) => {
+    try {
+      setError('');
+      
+      // Fetch order details including line items
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wc-order-detail`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ order_id: order.order_id }),
+      });
+
+      const orderDetail = await response.json();
+
+      if (!response.ok) {
+        setError('Erreur lors du chargement des détails de la commande');
+        return;
+      }
+
+      // Transform order data to invoice format
+      const invoiceData = {
+        customer_name: order.customer_name,
+        customer_email: order.customer_email,
+        customer_phone: '',
+        customer_address: order.billing_address || order.shipping_address || '',
+        invoice_date: new Date().toISOString().split('T')[0],
+        due_date: '',
+        notes: `Facture générée à partir de la commande #${order.order_number}`,
+        line_items: (orderDetail.line_items || []).map((item: any, index: number) => {
+          // Calculate VAT percentage from tax data
+          const vatPercentage = item.calculated_vat_rate || 
+            (item.tax_total > 0 && item.subtotal > 0 ? (item.tax_total / item.subtotal) * 100 : 0);
+          
+          // Use subtotal as HT price (WooCommerce subtotal is before tax)
+          const totalHT = item.subtotal;
+          const unitPriceHT = totalHT / item.quantity;
+          const vatAmount = item.tax_total;
+
+          return {
+            id: `order-${order.order_id}-${index}`,
+            product_id: item.product_id,
+            product_sku: item.product_sku || '',
+            product_name: item.product_name,
+            quantity: item.quantity,
+            unit_price_ht: unitPriceHT,
+            total_ht: totalHT,
+            vat_percentage: Math.round(vatPercentage * 100) / 100,
+            vat_amount: vatAmount,
+          };
+        }),
+      };
+
+      // Call the parent function to navigate to invoice form with pre-filled data
+      if (onGenerateInvoice) {
+        onGenerateInvoice(invoiceData);
+      }
+
+    } catch (err) {
+      setError('Erreur lors de la génération de la facture');
+    }
+  };
+
   // If an order is selected, show the detail view
   if (selectedOrderId) {
     return (
@@ -279,12 +344,15 @@ const VentesPage: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Mode de paiement
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                     <div className="flex justify-center items-center space-x-2">
                       <RefreshCw className="w-5 h-5 animate-spin" />
                       <span>Chargement...</span>
@@ -293,7 +361,7 @@ const VentesPage: React.FC = () => {
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                     Aucune commande trouvée
                   </td>
                 </tr>
@@ -336,6 +404,19 @@ const VentesPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {order.payment_method}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleGenerateInvoice(order);
+                        }}
+                        className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors duration-200"
+                        title="Générer une facture"
+                      >
+                        <FileText className="w-3 h-3" />
+                        <span className="text-xs">Facture</span>
+                      </button>
                     </td>
                   </tr>
                 ))

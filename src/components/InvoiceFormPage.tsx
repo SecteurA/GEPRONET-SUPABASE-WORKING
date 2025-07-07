@@ -40,9 +40,10 @@ interface Invoice {
 
 interface InvoiceFormPageProps {
   onBack: () => void;
+  preFilledData?: any;
 }
 
-const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack }) => {
+const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData }) => {
   const [invoice, setInvoice] = useState<Invoice>({
     customer_name: '',
     customer_email: '',
@@ -62,6 +63,13 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack }) => {
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
   const [searchTouched, setSearchTouched] = useState(false);
+
+  // Initialize with pre-filled data if provided
+  useEffect(() => {
+    if (preFilledData) {
+      setInvoice(preFilledData);
+    }
+  }, [preFilledData]);
 
   // Debounced search function
   const fetchProducts = async (searchTerm: string) => {

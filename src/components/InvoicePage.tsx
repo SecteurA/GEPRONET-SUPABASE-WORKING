@@ -5,9 +5,21 @@ import InvoiceDetailPage from './InvoiceDetailPage';
 
 type ViewMode = 'list' | 'form' | 'detail';
 
-const InvoicePage: React.FC = () => {
+interface InvoicePageProps {
+  preFilledData?: any;
+  onClearPreFilled?: () => void;
+}
+
+const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFilled }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+
+  // If we have pre-filled data, go to form mode immediately
+  React.useEffect(() => {
+    if (preFilledData) {
+      setViewMode('form');
+    }
+  }, [preFilledData]);
 
   const handleCreateNew = () => {
     setViewMode('form');
@@ -16,6 +28,10 @@ const InvoicePage: React.FC = () => {
   const handleBackToList = () => {
     setViewMode('list');
     setSelectedInvoiceId(null);
+    // Clear pre-filled data when going back to list
+    if (onClearPreFilled) {
+      onClearPreFilled();
+    }
   };
 
   const handleViewInvoice = (invoiceId: string) => {
@@ -25,7 +41,7 @@ const InvoicePage: React.FC = () => {
 
   switch (viewMode) {
     case 'form':
-      return <InvoiceFormPage onBack={handleBackToList} />;
+      return <InvoiceFormPage onBack={handleBackToList} preFilledData={preFilledData} />;
     case 'detail':
       return <InvoiceDetailPage invoiceId={selectedInvoiceId!} onBack={handleBackToList} />;
     default:

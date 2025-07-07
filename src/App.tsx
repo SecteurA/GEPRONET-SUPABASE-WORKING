@@ -11,13 +11,19 @@ import InvoicePage from './components/InvoicePage';
 
 function App() {
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [preFilledInvoiceData, setPreFilledInvoiceData] = useState<any>(null);
+
+  const handleGenerateInvoiceFromOrder = (orderData: any) => {
+    setPreFilledInvoiceData(orderData);
+    setActiveSection('factures');
+  };
 
   const renderContent = () => {
     switch (activeSection) {
       case 'ventes':
-        return <VentesPage />;
+        return <VentesPage onGenerateInvoice={handleGenerateInvoiceFromOrder} />;
       case 'factures':
-        return <InvoicePage />;
+        return <InvoicePage preFilledData={preFilledInvoiceData} onClearPreFilled={() => setPreFilledInvoiceData(null)} />;
       case 'settings':
         return <SettingsPage />;
       case 'clients':
