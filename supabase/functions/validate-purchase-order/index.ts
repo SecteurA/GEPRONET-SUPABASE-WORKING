@@ -71,6 +71,29 @@ Deno.serve(async (req: Request) => {
 
     const alreadyCompleted = purchaseOrderData.status === 'completed';
 
+    // First, fetch the current quantities for each item to calculate differences
+    const lineItemIds = received_items.map(item => item.id);
+    const { data: currentLineItems, error: currentLineItemsError } = await supabase
+      .from('purchase_order_line_items')
+      .select('id, quantity_received')
+      .in('id', lineItemIds);
+      
+    if (currentLineItemsError) {
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch current line items' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
+    // Create a map of current received quantities
+    const currentQuantities: Record<string, number> = {};
+    currentLineItems?.forEach(item => {
+      currentQuantities[item.id] = item.quantity_received || 0;
+    });
+
     // Update received quantities in database
     const updatePromises = received_items.map(item => 
       supabase
@@ -125,71 +148,69 @@ Deno.serve(async (req: Request) => {
       const wcAuth = btoa(`${wcSettings.consumer_key}:${wcSettings.consumer_secret}`);
 
       for (const receivedItem of received_items) {
-        if (receivedItem.quantity_received > 0) {
-          try {
-            // Get the line item details to find product_id
-            const { data: lineItem, error: lineItemError } = await supabase
-              .from('purchase_order_line_items')
-              .select('product_id, product_name, quantity_received')
-              .eq('id', receivedItem.id)
-              .single();
+        try {
+          // Get the line item details to find product_id
+          const { data: lineItem, error: lineItemError } = await supabase
+            .from('purchase_order_line_items')
+            .select('product_id, product_name, quantity_received')
+            .eq('id', receivedItem.id)
+            .single();
 
-            if (lineItemError || !lineItem) {
-              console.error('Failed to get line item:', lineItemError);
-              stockUpdateErrors++;
-              continue;
-            }
-
-            // Calculate the difference in received quantity to only add the new units
-            const previouslyReceived = lineItem.quantity_received || 0;
-            const newUnits = receivedItem.quantity_received - previouslyReceived;
-            
-            // Only proceed if there are new units to add
-            if (newUnits > 0) {
-              // Get current product data from WooCommerce
-              const productResponse = await fetch(`${wcSettings.api_url}/products/${lineItem.product_id}`, {
-                headers: {
-                  'Authorization': `Basic ${wcAuth}`,
-                  'Content-Type': 'application/json',
-                },
-              });
-
-              if (productResponse.ok) {
-                const product = await productResponse.json();
-                
-                // Only update stock if product manages stock
-                if (product.manage_stock) {
-                  const currentStock = parseInt(product.stock_quantity || 0);
-                  const newStockQuantity = currentStock + newUnits;
-                  
-                  // Update product stock in WooCommerce
-                  const updateResponse = await fetch(`${wcSettings.api_url}/products/${lineItem.product_id}`, {
-                    method: 'PUT',
-                    headers: {
-                      'Authorization': `Basic ${wcAuth}`,
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                      stock_quantity: newStockQuantity,
-                    }),
-                  });
-
-                  if (updateResponse.ok) {
-                    stockUpdateCount++;
-                  } else {
-                    console.error(`Failed to update stock for product ${lineItem.product_id}`);
-                    stockUpdateErrors++;
-                  }
-                }
-              } else {
-                console.error(`Failed to get product ${lineItem.product_id} from WooCommerce`);
-                stockUpdateErrors++;
-              }
-            }
-          } catch (stockError) {
-            console.error(`Stock update error for item ${receivedItem.id}:`, stockError);
+          if (lineItemError || !lineItem) {
+            console.error('Failed to get line item:', lineItemError);
             stockUpdateErrors++;
+            continue;
           }
+
+          // Calculate the difference in received quantity to only add the new units
+          const previouslyReceived = currentQuantities[receivedItem.id] || 0;
+          const newUnits = receivedItem.quantity_received - previouslyReceived;
+          
+          // Only proceed if there are new units to add to inventory
+          if (newUnits > 0) {
+            // Get current product data from WooCommerce
+            const productResponse = await fetch(`${wcSettings.api_url}/products/${lineItem.product_id}`, {
+              headers: {
+                'Authorization': `Basic ${wcAuth}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (productResponse.ok) {
+              const product = await productResponse.json();
+              
+              // Only update stock if product manages stock
+              if (product.manage_stock) {
+                const currentStock = parseInt(product.stock_quantity || 0);
+                const newStockQuantity = currentStock + newUnits;
+                
+                // Update product stock in WooCommerce
+                const updateResponse = await fetch(`${wcSettings.api_url}/products/${lineItem.product_id}`, {
+                  method: 'PUT',
+                  headers: {
+                    'Authorization': `Basic ${wcAuth}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    stock_quantity: newStockQuantity,
+                  }),
+                });
+
+                if (updateResponse.ok) {
+                  stockUpdateCount++;
+                } else {
+                  console.error(`Failed to update stock for product ${lineItem.product_id}`);
+                  stockUpdateErrors++;
+                }
+              }
+            } else {
+              console.error(`Failed to get product ${lineItem.product_id} from WooCommerce`);
+              stockUpdateErrors++;
+            }
+          }
+        } catch (stockError) {
+          console.error(`Stock update error for item ${receivedItem.id}:`, stockError);
+          stockUpdateErrors++;
         }
       }
     }
