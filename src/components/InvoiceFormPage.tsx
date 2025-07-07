@@ -71,6 +71,27 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
   useEffect(() => {
     if (preFilledData) {
       setInvoice(preFilledData);
+      
+      // Create a mock client object from the pre-filled data if customer info exists
+      if (preFilledData.customer_name) {
+        const nameParts = preFilledData.customer_name.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        
+        const mockClient = {
+          id: 'prefilled-client',
+          first_name: firstName,
+          last_name: lastName,
+          email: preFilledData.customer_email || '',
+          phone: preFilledData.customer_phone || '',
+          company_name: '',
+          ice: '',
+          address_line1: preFilledData.customer_address || '',
+          created_at: '',
+          updated_at: '',
+        };
+        setSelectedClient(mockClient);
+      }
     }
   }, [preFilledData]);
 
