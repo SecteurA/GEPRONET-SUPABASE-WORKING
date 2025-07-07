@@ -108,10 +108,22 @@ const OrderDetailPage: React.FC<OrderDetailPageProps> = ({ orderId, onBack }) =>
   };
 
   const getTaxPercentage = (taxClass: string) => {
-    if (!taxClass) {
-      return '-';
+    if (!taxClass || taxClass.toLowerCase() === 'exonerer' || taxClass.toLowerCase() === 'zero-rate' || taxClass.toLowerCase() === 'zero_rate') {
+      return '0%';
     }
-    return taxClass;
+    
+    // Map common tax classes to percentages
+    const taxMapping: { [key: string]: string } = {
+      'standard': '20%',
+      'reduced-rate': '10%',
+      'reduced_rate': '10%',
+      'zero-rate': '0%',
+      'zero_rate': '0%',
+      'exonerer': '0%',
+    };
+    
+    const normalizedClass = taxClass.toLowerCase().replace(/[_\s]/g, '-');
+    return taxMapping[normalizedClass] || '20%';
   };
 
   if (loading) {
