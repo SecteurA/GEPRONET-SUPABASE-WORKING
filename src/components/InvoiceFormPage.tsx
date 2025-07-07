@@ -151,6 +151,7 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
 
     return () => clearTimeout(timeoutId);
   }, [productSearch, searchTouched]);
+
   const addProductToInvoice = (product: Product) => {
     const priceFromWC = parseFloat(product.regular_price || product.price || '0');
     const vatPercentage = getVATPercentage(product.tax_class, product.tax_rates);
@@ -219,7 +220,7 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
       line_items: prev.line_items.map(item => {
         if (item.id === itemId) {
           const totalHT = item.unit_price_ht * quantity;
-          const vatAmount = totalHT * (item.vat_percentage / 100);
+          const vatAmount = totalHT * (Number(item.vat_percentage) / 100);
           return {
             ...item,
             quantity,
@@ -478,7 +479,7 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
             </div>
           )}
         </div>
-      </div>
+
         {invoice.line_items.length > 0 && (
           <div className="bg-gray-50 p-6 border-t border-gray-200">
             <div className="flex justify-end">
@@ -509,8 +510,7 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
             </div>
           </div>
         )}
-        </div>
-      )}
+      </div>
 
       {/* Notes */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -593,9 +593,9 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
                               const vatPercentage = getVATPercentage(product.tax_class, product.tax_rates);
                               const unitPriceHT = vatPercentage > 0 ? priceFromWC / (1 + vatPercentage / 100) : priceFromWC;
                               return unitPriceHT.toLocaleString('fr-FR', { 
-                              minimumFractionDigits: 2, 
-                              maximumFractionDigits: 2 
-                            }) + ' DH HT';
+                                minimumFractionDigits: 2, 
+                                maximumFractionDigits: 2 
+                              }) + ' DH HT';
                             })()}
                           </p>
                           <p className="text-sm text-gray-500">
