@@ -46,7 +46,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
     { id: 'journal', icon: <BookOpen size={20} />, label: 'Journal de vente' },
     { id: 'livraison', icon: <Truck size={20} />, label: 'Bon de Livraison' },
     { id: 'retour', icon: <RotateCcw size={20} />, label: 'Bon de retour' },
-    { id: 'commandes', icon: <ClipboardList size={20} />, label: 'Bon de commandes' },
+    { id: 'commandes', icon: <ClipboardList size={20} />, label: 'Bon de commande' },
     { id: 'fournisseurs', icon: <Users size={20} />, label: 'Fournisseurs' },
     { id: 'clients', icon: <UserCheck size={20} />, label: 'Clients' },
   ];
