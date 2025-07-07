@@ -4,9 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 
 interface HeaderProps {
   onSettingsClick: () => void;
+  onLogoClick: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onSettingsClick }) => {
+const Header: React.FC<HeaderProps> = ({ onSettingsClick, onLogoClick }) => {
   const { signOut, user } = useAuth();
 
   const handleSignOut = async () => {
@@ -16,7 +17,7 @@ const Header: React.FC<HeaderProps> = ({ onSettingsClick }) => {
   return (
     <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 shadow-sm z-50">
       <div className="flex items-center justify-between h-full px-6">
-        <div className="flex items-center">
+        <div className="flex items-center cursor-pointer" onClick={onLogoClick}>
           <img 
             src="https://pub-237d2da54b564d23aaa1c3826e1d4e65.r2.dev/gepronet/gepronet.png" 
             alt="Gepronet Logo" 

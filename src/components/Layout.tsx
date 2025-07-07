@@ -10,9 +10,13 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, onSettingsClick, activeSection, onSectionChange }) => {
+  const handleLogoClick = () => {
+    onSectionChange('dashboard');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header onSettingsClick={onSettingsClick} />
+      <Header onSettingsClick={onSettingsClick} onLogoClick={handleLogoClick} />
       <Sidebar activeSection={activeSection} onSectionChange={onSectionChange} />
       <main className="ml-64 pt-16 p-6">
         {children}
