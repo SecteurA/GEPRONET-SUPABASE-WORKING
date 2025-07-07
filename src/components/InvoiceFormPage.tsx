@@ -382,42 +382,37 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
       />
 
       {/* Additional Invoice Fields */}
-      {selectedClient && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Détails de la facture</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date d'échéance
-              </label>
-              <input
-                type="date"
-                value={invoice.due_date}
-                onChange={(e) => setInvoice(prev => ({ ...prev, due_date: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
-              />
-            </div>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Détails de la facture</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Date d'échéance
+            </label>
+            <input
+              type="date"
+              value={invoice.due_date}
+              onChange={(e) => setInvoice(prev => ({ ...prev, due_date: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
+            />
           </div>
         </div>
-      )}
+      </div>
 
       {/* Add Product Section */}
-      {selectedClient && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Ajouter des produits</h2>
-          <button
-            onClick={handleOpenProductModal}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Ajouter Produit</span>
-          </button>
-        </div>
-      )}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Ajouter des produits</h2>
+        <button
+          onClick={handleOpenProductModal}
+          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Ajouter Produit</span>
+        </button>
+      </div>
 
       {/* Line Items */}
-      {selectedClient && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Articles</h2>
           
@@ -483,8 +478,7 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
             </div>
           )}
         </div>
-
-        {/* Totals */}
+      </div>
         {invoice.line_items.length > 0 && (
           <div className="bg-gray-50 p-6 border-t border-gray-200">
             <div className="flex justify-end">
@@ -519,8 +513,7 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
       )}
 
       {/* Notes */}
-      {selectedClient && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Notes</h2>
         <textarea
           value={invoice.notes}
@@ -529,8 +522,7 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
           placeholder="Notes additionnelles pour la facture..."
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
         />
-        </div>
-      )}
+      </div>
 
       {/* Product Selection Modal */}
       {showProductModal && (
