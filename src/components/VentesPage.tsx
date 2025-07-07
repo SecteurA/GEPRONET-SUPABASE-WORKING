@@ -196,8 +196,18 @@ const VentesPage: React.FC<VentesPageProps> = ({ onGenerateInvoice }) => {
         due_date: '',
         notes: `Facture générée à partir de la commande #${order.order_number}`,
         line_items: (orderDetail.line_items || []).map((item: any, index: number) => {
-          // Preserve original tax class from order (don't calculate VAT percentage)
-          const originalTaxClass = item.tax_class || '';
+          // Apply the same display logic as the order view for consistency
+          const getTaxPercentageDisplay = (taxClass: string) => {
+            // Only convert "exonerer" to "0%", keep everything else as-is
+            if (!taxClass || taxClass.toLowerCase().includes('exonerer')) {
+              return '0%';
+            }
+            
+            // Return the tax class exactly as it comes from WooCommerce
+            return taxClass;
+          };
+          
+          const displayedTaxClass = getTaxPercentageDisplay(item.tax_class || '');
           
           // Use subtotal as HT price (WooCommerce subtotal is before tax)
           const totalHT = item.subtotal;
@@ -212,7 +222,7 @@ const VentesPage: React.FC<VentesPageProps> = ({ onGenerateInvoice }) => {
             quantity: item.quantity,
             unit_price_ht: unitPriceHT,
             total_ht: totalHT,
-            vat_percentage: originalTaxClass, // Keep original tax class instead of calculated percentage
+            vat_percentage: displayedTaxClass, // Use the same display format as order view
             vat_amount: vatAmount,
           };
         }),
