@@ -13,10 +13,16 @@ import DeliveryNotePage from './components/DeliveryNotePage';
 function App() {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [preFilledInvoiceData, setPreFilledInvoiceData] = useState<any>(null);
+  const [preFilledDeliveryNoteData, setPreFilledDeliveryNoteData] = useState<any>(null);
 
   const handleGenerateInvoiceFromOrder = (orderData: any) => {
     setPreFilledInvoiceData(orderData);
     setActiveSection('factures');
+  };
+
+  const handleGenerateDeliveryNoteFromInvoice = (deliveryNoteData: any) => {
+    setPreFilledDeliveryNoteData(deliveryNoteData);
+    setActiveSection('livraison');
   };
 
   const renderContent = () => {
@@ -24,9 +30,16 @@ function App() {
       case 'ventes':
         return <VentesPage onGenerateInvoice={handleGenerateInvoiceFromOrder} />;
       case 'factures':
-        return <InvoicePage preFilledData={preFilledInvoiceData} onClearPreFilled={() => setPreFilledInvoiceData(null)} />;
+        return <InvoicePage 
+          preFilledData={preFilledInvoiceData} 
+          onClearPreFilled={() => setPreFilledInvoiceData(null)}
+          onGenerateDeliveryNote={handleGenerateDeliveryNoteFromInvoice}
+        />;
       case 'livraison':
-        return <DeliveryNotePage />;
+        return <DeliveryNotePage 
+          preFilledData={preFilledDeliveryNoteData} 
+          onClearPreFilled={() => setPreFilledDeliveryNoteData(null)} 
+        />;
       case 'settings':
         return <SettingsPage />;
       case 'clients':

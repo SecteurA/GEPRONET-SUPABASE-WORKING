@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Search, ChevronLeft, ChevronRight, Eye, FileText } from 'lucide-react';
+import { RefreshCw, Search, ChevronLeft, ChevronRight, Plus, Eye, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface DeliveryNote {
@@ -18,10 +18,11 @@ interface DeliveryNote {
 }
 
 interface DeliveryNoteListPageProps {
+  onCreateNew: () => void;
   onViewDeliveryNote: (deliveryNoteId: string) => void;
 }
 
-const DeliveryNoteListPage: React.FC<DeliveryNoteListPageProps> = ({ onViewDeliveryNote }) => {
+const DeliveryNoteListPage: React.FC<DeliveryNoteListPageProps> = ({ onCreateNew, onViewDeliveryNote }) => {
   const [deliveryNotes, setDeliveryNotes] = useState<DeliveryNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -126,6 +127,15 @@ const DeliveryNoteListPage: React.FC<DeliveryNoteListPageProps> = ({ onViewDeliv
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Bons de Livraison</h1>
           <p className="text-gray-600">Gestion des bons de livraison</p>
+        </div>
+        <div className="flex space-x-3">
+          <button
+            onClick={onCreateNew}
+            className="flex items-center space-x-2 px-4 py-2 bg-[#21522f] text-white rounded-lg hover:bg-[#1a4025] transition-colors duration-200"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nouveau Bon de Livraison</span>
+          </button>
         </div>
       </div>
 

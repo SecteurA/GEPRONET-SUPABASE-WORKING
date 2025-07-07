@@ -8,9 +8,10 @@ type ViewMode = 'list' | 'form' | 'detail';
 interface InvoicePageProps {
   preFilledData?: any;
   onClearPreFilled?: () => void;
+  onGenerateDeliveryNote?: (deliveryNoteData: any) => void;
 }
 
-const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFilled }) => {
+const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFilled, onGenerateDeliveryNote }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
@@ -39,9 +40,11 @@ const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFill
     setViewMode('detail');
   };
 
-  const handleGenerateDeliveryNote = (invoice: any) => {
-    // You could implement navigation to delivery notes here if needed
-    console.log('Delivery note generated for invoice:', invoice.id);
+  const handleGenerateDeliveryNote = (deliveryNoteData: any) => {
+    // Pass the delivery note data to parent component for navigation
+    if (onGenerateDeliveryNote) {
+      onGenerateDeliveryNote(deliveryNoteData);
+    }
   };
 
   switch (viewMode) {

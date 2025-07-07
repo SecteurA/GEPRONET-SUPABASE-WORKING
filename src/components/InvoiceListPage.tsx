@@ -130,7 +130,7 @@ const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewIn
 
   const handleGenerateDeliveryNote = async (invoice: Invoice) => {
     try {
-      setError('');
+      // Don't show any loading states, just prepare the data and navigate
       
       // Fetch invoice details including line items
       const { data: lineItems, error: lineItemsError } = await supabase
@@ -140,7 +140,7 @@ const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewIn
         .order('created_at', { ascending: true });
 
       if (lineItemsError) {
-        setError('Erreur lors du chargement des détails de la facture');
+        console.error('Error loading invoice line items:', lineItemsError);
         return;
       }
 
@@ -161,33 +161,13 @@ const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewIn
         })),
       };
 
-      // Call edge function to save delivery note
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-delivery-note`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(deliveryNoteData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        setError(result.error || 'Erreur lors de la génération du bon de livraison');
-        return;
-      }
-
-      // Show success message and optionally navigate to delivery note
-      alert(`Bon de livraison ${result.delivery_note.delivery_note_number} créé avec succès`);
-      
       // Call parent callback if provided
       if (onGenerateDeliveryNote) {
-        onGenerateDeliveryNote(invoice);
+        onGenerateDeliveryNote(deliveryNoteData);
       }
 
     } catch (err) {
-      setError('Erreur lors de la génération du bon de livraison');
+      console.error('Error preparing delivery note data:', err);
     }
   };
 
