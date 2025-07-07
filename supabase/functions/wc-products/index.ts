@@ -53,6 +53,8 @@ Deno.serve(async (req: Request) => {
     const url = new URL(req.url);
     const search = url.searchParams.get('search') || '';
     
+    let allProducts;
+    
     if (search) {
       // Optimize search to use a single API call with more efficient parameters
       let queryParams = new URLSearchParams({
@@ -89,7 +91,7 @@ Deno.serve(async (req: Request) => {
         );
       }
       
-      const allProducts = await nameResponse.json();
+      allProducts = await nameResponse.json();
     } else {
       // No search term, get regular products
       const wcUrl = `${settings.api_url}/products?per_page=20&status=publish`;
