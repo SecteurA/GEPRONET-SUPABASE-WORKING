@@ -86,9 +86,12 @@ const InvoicePage: React.FC = () => {
   };
 
   const addProductToInvoice = (product: Product) => {
-    const unitPrice = parseFloat(product.regular_price || product.price || '0');
+    const priceFromWC = parseFloat(product.regular_price || product.price || '0');
     const vatPercentage = getVATPercentage(product.tax_class, product.tax_rates);
-    const totalHT = unitPrice * 1;
+    
+    // Calculate HT price from TTC price (assuming WooCommerce prices include VAT)
+    const unitPriceHT = vatPercentage > 0 ? priceFromWC / (1 + vatPercentage / 100) : priceFromWC;
+    const totalHT = unitPriceHT * 1;
     const vatAmount = totalHT * (vatPercentage / 100);
 
     const newLineItem: InvoiceLineItem = {
@@ -97,7 +100,7 @@ const InvoicePage: React.FC = () => {
       product_sku: product.sku || '',
       product_name: product.name,
       quantity: 1,
-      unit_price_ht: unitPrice,
+      unit_price_ht: unitPriceHT,
       total_ht: totalHT,
       vat_percentage: vatPercentage,
       vat_amount: vatAmount,
@@ -454,10 +457,15 @@ const InvoicePage: React.FC = () => {
                         </div>
                         <div className="text-right">
                           <p className="font-semibold text-[#21522f]">
-                            {parseFloat(product.regular_price || product.price || '0').toLocaleString('fr-FR', { 
+                            {(() => {
+                              const priceFromWC = parseFloat(product.regular_price || product.price || '0');
+                              const vatPercentage = getVATPercentage(product.tax_class, product.tax_rates);
+                              const unitPriceHT = vatPercentage > 0 ? priceFromWC / (1 + vatPercentage / 100) : priceFromWC;
+                              return unitPriceHT.toLocaleString('fr-FR', { 
                               minimumFractionDigits: 2, 
                               maximumFractionDigits: 2 
-                            })} DH
+                            }) + ' DH HT';
+                            })()}
                           </p>
                           <p className="text-sm text-gray-500">
                             TVA: {getVATPercentage(product.tax_class, product.tax_rates)}%
