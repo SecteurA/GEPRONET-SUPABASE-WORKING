@@ -27,7 +27,7 @@ const Dashboard: React.FC = () => {
     <div className="space-y-6">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Tableau de Bord</h1>
-        <p className="text-gray-600">Bienvenue sur votre dashboard Gepronet</p>
+        <p className="text-gray-600">Bienvenue sur Gepronet</p>
       </div>
 
       {/* Stats Cards */}
