@@ -66,7 +66,7 @@ const SettingsPage: React.FC = () => {
         .from('app_settings')
         .select('value')
         .eq('key', 'wc_products_last_sync')
-        .single();
+        .maybeSingle();
 
       if (!lastSyncError && lastSyncData?.value) {
         setLastSyncTime(new Date(lastSyncData.value as string));
