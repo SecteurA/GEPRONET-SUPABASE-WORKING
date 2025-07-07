@@ -108,21 +108,10 @@ const OrderDetailPage: React.FC<OrderDetailPageProps> = ({ orderId, onBack }) =>
   };
 
   const getTaxPercentage = (taxClass: string) => {
-    // This function now shows the tax class name instead of trying to guess percentage
     if (!taxClass) {
-      return 'Standard';
+      return '-';
     }
-    
-    // Return a friendly name for the tax class
-    const taxClassMapping: { [key: string]: string } = {
-      'standard': 'Standard',
-      'reduced-rate': 'Taux réduit',
-      'zero-rate': 'Exonéré',
-      'exonerer': 'Exonéré',
-    };
-    
-    const normalizedClass = taxClass.toLowerCase().replace(/[_\s]/g, '-');
-    return taxClassMapping[normalizedClass] || taxClass;
+    return taxClass;
   };
 
   if (loading) {
@@ -251,10 +240,7 @@ const OrderDetailPage: React.FC<OrderDetailPageProps> = ({ orderId, onBack }) =>
                         {item.subtotal.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
                       </td>
                       <td className="border border-gray-300 px-4 py-3 text-center text-sm text-gray-600">
-                        {item.calculated_vat_rate ? 
-                          `${item.calculated_vat_rate.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}%` : 
-                          getTaxPercentage(item.tax_class)
-                        }
+                        {getTaxPercentage(item.tax_class)}
                       </td>
                       <td className="border border-gray-300 px-4 py-3 text-right text-sm text-gray-900">
                         {item.tax_total.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH

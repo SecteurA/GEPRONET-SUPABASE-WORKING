@@ -186,31 +186,19 @@ Deno.serve(async (req: Request) => {
     // Process and upsert line items
     const allLineItems = [];
     for (const order of wcOrders) {
-      const lineItems = order.line_items.map(item => {
-        const subtotal = parseFloat(item.subtotal);
-        const taxTotal = parseFloat(item.total_tax);
-        
-        // Calculate actual VAT rate from WooCommerce data
-        let calculatedVatRate = 0;
-        if (subtotal > 0 && taxTotal > 0) {
-          calculatedVatRate = Math.round((taxTotal / subtotal) * 100 * 100) / 100; // Round to 2 decimal places
-        }
-        
-        return {
-          order_id: order.id.toString(),
-          product_id: item.product_id.toString(),
-          product_name: item.name,
-          product_sku: item.sku || null,
-          quantity: item.quantity,
-          price: parseFloat(item.price.toString()),
-          total: parseFloat(item.total),
-          subtotal: subtotal,
-          tax_total: taxTotal,
-          tax_class: item.tax_class || null,
-          calculated_vat_rate: calculatedVatRate,
-          updated_at: new Date().toISOString(),
-        };
-      });
+      const lineItems = order.line_items.map(item => ({
+        order_id: order.id.toString(),
+        product_id: item.product_id.toString(),
+        product_name: item.name,
+        product_sku: item.sku || null,
+        quantity: item.quantity,
+        price: parseFloat(item.price.toString()),
+        total: parseFloat(item.total),
+        subtotal: parseFloat(item.subtotal),
+        tax_total: parseFloat(item.total_tax),
+        tax_class: item.tax_class || null,
+        updated_at: new Date().toISOString(),
+      }));
       allLineItems.push(...lineItems);
     }
 
