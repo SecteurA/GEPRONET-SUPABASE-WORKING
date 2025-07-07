@@ -11,6 +11,7 @@ import InvoicePage from './components/InvoicePage';
 import DeliveryNotePage from './components/DeliveryNotePage';
 import ReturnNotePage from './components/ReturnNotePage';
 import QuotePage from './components/QuotePage';
+import SalesJournalPage from './components/SalesJournalPage';
 
 function App() {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -43,6 +44,8 @@ function App() {
     switch (activeSection) {
       case 'ventes':
         return <VentesPage onGenerateInvoice={handleGenerateInvoiceFromOrder} />;
+      case 'journal':
+        return <SalesJournalPage />;
       case 'factures':
         return <InvoicePage 
           preFilledData={preFilledInvoiceData} 
