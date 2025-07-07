@@ -7,7 +7,6 @@ import Dashboard from './components/Dashboard';
 import VentesPage from './components/VentesPage';
 import SettingsPage from './components/SettingsPage';
 import ClientsPage from './components/ClientsPage';
-import InvoicesPage from './components/InvoicesPage';
 
 function App() {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -16,8 +15,6 @@ function App() {
     switch (activeSection) {
       case 'ventes':
         return <VentesPage />;
-      case 'factures':
-        return <InvoicesPage />;
       case 'settings':
         return <SettingsPage />;
       case 'clients':

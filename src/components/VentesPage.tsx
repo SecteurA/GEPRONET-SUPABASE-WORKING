@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Search, ChevronLeft, ChevronRight, Download, Globe, CreditCard, FileText } from 'lucide-react';
+import { RefreshCw, Search, ChevronLeft, ChevronRight, Download, Globe, CreditCard } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import OrderDetailPage from './OrderDetailPage';
-import InvoiceForm from './InvoiceForm';
 
 interface Order {
   order_id: string;
@@ -32,7 +31,6 @@ const VentesPage: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [convertingOrderId, setConvertingOrderId] = useState<string | null>(null);
 
   const ordersPerPage = 20;
 
@@ -164,16 +162,6 @@ const VentesPage: React.FC = () => {
 
   const handleBackToList = () => {
     setSelectedOrderId(null);
-    setConvertingOrderId(null);
-  };
-
-  const handleConvertToInvoice = (orderId: string) => {
-    setConvertingOrderId(orderId);
-  };
-
-  const handleInvoiceSubmitted = () => {
-    setConvertingOrderId(null);
-    setSuccess('Facture créée avec succès à partir de la commande');
   };
 
   // If an order is selected, show the detail view
@@ -182,18 +170,6 @@ const VentesPage: React.FC = () => {
       <OrderDetailPage 
         orderId={selectedOrderId} 
         onBack={handleBackToList}
-      />
-    );
-  }
-
-  // If converting an order to invoice, show the invoice form
-  if (convertingOrderId) {
-    return (
-      <InvoiceForm
-        invoice={null}
-        importOrderId={convertingOrderId}
-        onSubmit={handleInvoiceSubmitted}
-        onCancel={handleBackToList}
       />
     );
   }
@@ -303,15 +279,12 @@ const VentesPage: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Mode de paiement
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                     <div className="flex justify-center items-center space-x-2">
                       <RefreshCw className="w-5 h-5 animate-spin" />
                       <span>Chargement...</span>
@@ -320,7 +293,7 @@ const VentesPage: React.FC = () => {
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                     Aucune commande trouvée
                   </td>
                 </tr>
@@ -363,19 +336,6 @@ const VentesPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {order.payment_method}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleConvertToInvoice(order.order_id);
-                        }}
-                        className="flex items-center space-x-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors duration-200"
-                        title="Convertir en facture"
-                      >
-                        <FileText className="w-3 h-3" />
-                        <span>Facture</span>
-                      </button>
                     </td>
                   </tr>
                 ))
