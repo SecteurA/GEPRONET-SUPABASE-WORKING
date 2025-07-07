@@ -57,17 +57,24 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [showProductModal, setShowProductModal] = useState(false);
   const [productSearch, setProductSearch] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
+  const [searchTouched, setSearchTouched] = useState(false);
 
-  const fetchProducts = async () => {
+  // Debounced search function
+  const fetchProducts = async (searchTerm: string) => {
+    if (searchTerm.length < 3) {
+      setProducts([]);
+      return;
+    }
+
     try {
-      setLoading(true);
+      setSearchLoading(true);
       setError('');
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wc-products`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wc-products?search=${encodeURIComponent(searchTerm)}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
@@ -86,10 +93,20 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack }) => {
     } catch (err) {
       setError('Erreur lors du chargement des produits');
     } finally {
-      setLoading(false);
+      setSearchLoading(false);
     }
   };
 
+  // Debounce search to avoid too many API calls
+  useEffect(() => {
+    if (!searchTouched) return;
+    
+    const timeoutId = setTimeout(() => {
+      fetchProducts(productSearch);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [productSearch, searchTouched]);
   const addProductToInvoice = (product: Product) => {
     const priceFromWC = parseFloat(product.regular_price || product.price || '0');
     const vatPercentage = getVATPercentage(product.tax_class, product.tax_rates);
@@ -117,6 +134,10 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack }) => {
     }));
 
     setShowProductModal(false);
+    // Clear search state for next time
+    setProductSearch('');
+    setProducts([]);
+    setSearchTouched(false);
   };
 
   const getVATPercentage = (taxClass: string, taxRates?: any[]): number => {
@@ -186,10 +207,27 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack }) => {
     };
   };
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-    (product.sku && product.sku.toLowerCase().includes(productSearch.toLowerCase()))
-  );
+  const handleOpenProductModal = () => {
+    setShowProductModal(true);
+    // Reset search state when opening modal
+    setProductSearch('');
+    setProducts([]);
+    setSearchTouched(false);
+    setError('');
+  };
+
+  const handleCloseProductModal = () => {
+    setShowProductModal(false);
+    // Clear search state when closing modal
+    setProductSearch('');
+    setProducts([]);
+    setSearchTouched(false);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setProductSearch(value);
+    setSearchTouched(true);
+  };
 
   const { subtotalHT, totalVAT, totalTTC } = calculateTotals();
 
@@ -357,10 +395,7 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack }) => {
         {/* Add Product Button - After customer information */}
         <div className="mt-6 pt-6 border-t border-gray-200">
           <button
-            onClick={() => {
-              setShowProductModal(true);
-              if (products.length === 0) fetchProducts();
-            }}
+            onClick={handleOpenProductModal}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
           >
             <Plus className="w-4 h-4" />
@@ -490,7 +525,7 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack }) => {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Sélectionner un produit</h3>
                 <button
-                  onClick={() => setShowProductModal(false)}
+                  onClick={handleCloseProductModal}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   ✕
@@ -500,23 +535,33 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack }) => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Rechercher un produit..."
+                  placeholder="Tapez au moins 3 caractères pour rechercher..."
                   value={productSearch}
-                  onChange={(e) => setProductSearch(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
                 />
               </div>
             </div>
 
             <div className="p-6 overflow-y-auto max-h-[50vh]">
-              {loading ? (
+              {searchLoading ? (
                 <div className="text-center py-8">
                   <div className="w-8 h-8 border-4 border-[#21522f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                   <p className="text-gray-600">Chargement des produits...</p>
                 </div>
-              ) : filteredProducts.length > 0 ? (
+              ) : !searchTouched ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p>Tapez au moins 3 caractères pour rechercher des produits</p>
+                  <p className="text-sm mt-2">Recherche par nom ou référence (SKU)</p>
+                </div>
+              ) : productSearch.length < 3 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Tapez au moins 3 caractères pour lancer la recherche</p>
+                </div>
+              ) : products.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4">
-                  {filteredProducts.map((product) => (
+                  {products.map((product) => (
                     <div
                       key={product.id}
                       className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-200"
@@ -556,7 +601,9 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack }) => {
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
-                  <p>Aucun produit trouvé</p>
+                  <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p>Aucun produit trouvé pour "{productSearch}"</p>
+                  <p className="text-sm mt-2">Essayez avec d'autres mots-clés</p>
                 </div>
               )}
             </div>
