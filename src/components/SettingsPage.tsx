@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Save, AlertCircle, CheckCircle } from 'lucide-react';
+import { Save, AlertCircle, CheckCircle, RefreshCw, Database } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 interface WCSettings {
   id?: string;
@@ -17,11 +18,15 @@ const SettingsPage: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [productCount, setProductCount] = useState<number | null>(null);
 
   useEffect(() => {
     fetchSettings();
+    fetchCacheInfo();
   }, []);
 
   const fetchSettings = async () => {
@@ -51,6 +56,31 @@ const SettingsPage: React.FC = () => {
       setError('Erreur lors du chargement des paramètres');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCacheInfo = async () => {
+    try {
+      // Get cache stats from Supabase
+      const { data: lastSyncData, error: lastSyncError } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'wc_products_last_sync')
+        .single();
+
+      if (!lastSyncError && lastSyncData?.value) {
+        setLastSyncTime(new Date(lastSyncData.value as string));
+      }
+
+      const { count, error: countError } = await supabase
+        .from('wc_products_cache')
+        .select('*', { count: 'exact', head: true });
+
+      if (!countError) {
+        setProductCount(count);
+      }
+    } catch (err) {
+      console.error('Error fetching cache info:', err);
     }
   };
 
@@ -89,8 +119,50 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const refreshProductCache = async () => {
+    try {
+      setSyncing(true);
+      setError('');
+      setSuccess('');
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-wc-products`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result.error || 'Erreur lors de la synchronisation du cache');
+        return;
+      }
+
+      setSuccess(`${result.count} produits synchronisés avec succès`);
+      fetchCacheInfo(); // Update cache info
+    } catch (err) {
+      setError('Erreur lors de la synchronisation du cache');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleInputChange = (field: keyof WCSettings, value: string) => {
     setSettings(prev => ({ ...prev, [field]: value }));
+  };
+
+  const formatLastSyncTime = () => {
+    if (!lastSyncTime) return 'Jamais';
+    
+    return lastSyncTime.toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   if (loading) {
@@ -184,6 +256,43 @@ const SettingsPage: React.FC = () => {
               <li>Remplissez les informations et sélectionnez "Lecture/Écriture"</li>
               <li>Copiez la clé du consommateur et le secret généré</li>
             </ol>
+          </div>
+        </div>
+      </div>
+
+      {/* Product Cache Section */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <Database className="h-5 w-5 mr-2 text-[#21522f]" />
+          <span>Cache de Produits</span>
+        </h2>
+        
+        <div className="space-y-4">
+          <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-700">Dernière synchronisation</p>
+                <p className="text-lg font-semibold text-gray-900">{formatLastSyncTime()}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-700">Produits en cache</p>
+                <p className="text-lg font-semibold text-gray-900">{productCount !== null ? productCount : 'Inconnu'}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <button
+              onClick={refreshProductCache}
+              disabled={syncing}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+              <span>{syncing ? 'Synchronisation en cours...' : 'Rafraîchir le cache'}</span>
+            </button>
+            <p className="mt-2 text-sm text-gray-500">
+              La synchronisation peut prendre plusieurs minutes selon le nombre de produits. Le cache est automatiquement rafraîchi en arrière-plan tous les jours, mais vous pouvez le forcer manuellement ici.
+            </p>
           </div>
         </div>
       </div>

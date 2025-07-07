@@ -51,7 +51,111 @@ Deno.serve(async (req: Request) => {
     
     // Get URL parameters for search
     const url = new URL(req.url);
-    const search = url.searchParams.get('search') || '';
+    const search = url.searchParams.get('search')?.trim() || '';
+    const skipCache = url.searchParams.get('skip_cache') === 'true';
+    
+    // Check cache freshness
+    const { data: lastSync } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'wc_products_last_sync')
+      .single();
+    
+    const lastSyncTime = lastSync?.value ? new Date(lastSync.value as string) : null;
+    const now = new Date();
+    const cacheFreshThresholdHours = 24; // Consider cache fresh if updated within 24 hours
+    const isCacheFresh = lastSyncTime && 
+      ((now.getTime() - new Date(lastSyncTime as string).getTime()) / (1000 * 60 * 60)) < cacheFreshThresholdHours;
+    
+    // If cache is stale, trigger a background sync but don't wait for it
+    if (!isCacheFresh && !skipCache) {
+      console.log('Cache is stale, triggering background sync...');
+      fetch(`${Deno.env.get('SUPABASE_URL') ?? ''}/functions/v1/sync-wc-products`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY') ?? ''}`,
+          'Content-Type': 'application/json',
+        }
+      }).catch(err => console.error('Error triggering background sync:', err));
+    }
+    
+    // Use cache if search term exists and we're not explicitly skipping the cache
+    if (search.length >= 2 && !skipCache) {
+      console.log(`Searching products in cache for: "${search}"`);
+      
+      // Query the cache
+      let query = supabase
+        .from('wc_products_cache')
+        .select('*');
+        
+      // Apply search filter
+      const searchLower = search.toLowerCase();
+      query = query.or(
+        `name.ilike.%${searchLower}%,sku.ilike.%${searchLower}%`
+      );
+      
+      // Limit the results
+      query = query.limit(50);
+      
+      const { data: cacheProducts, error: cacheError } = await query;
+      
+      if (!cacheError && cacheProducts && cacheProducts.length > 0) {
+        console.log(`Found ${cacheProducts.length} products in cache`);
+        
+        // Get tax rates from settings
+        const { data: taxRatesData } = await supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'wc_tax_rates')
+          .single();
+          
+        const taxRates = taxRatesData?.value ? JSON.parse(taxRatesData.value as string) : [];
+        
+        // Sort results with exact matches at the top
+        const searchPattern = new RegExp(`^${searchLower}`, 'i');
+        cacheProducts.sort((a, b) => {
+          const aNameMatch = a.name.toLowerCase().match(searchPattern) ? -1 : 0;
+          const bNameMatch = b.name.toLowerCase().match(searchPattern) ? -1 : 0;
+          
+          if (aNameMatch !== bNameMatch) return aNameMatch - bNameMatch;
+          
+          const aSkuMatch = (a.sku || '').toLowerCase().match(searchPattern) ? -1 : 0;
+          const bSkuMatch = (b.sku || '').toLowerCase().match(searchPattern) ? -1 : 0;
+          
+          return aSkuMatch - bSkuMatch;
+        });
+        
+        // Transform products for response
+        const transformedProducts = cacheProducts.map(product => ({
+          id: parseInt(product.id),
+          name: product.name,
+          sku: product.sku || '',
+          price: product.price.toString(),
+          regular_price: product.regular_price.toString(),
+          tax_class: product.tax_class || '',
+          categories: typeof product.categories === 'string' 
+            ? JSON.parse(product.categories) 
+            : (product.categories || []),
+          stock_status: product.stock_status,
+          manage_stock: product.manage_stock,
+          stock_quantity: product.stock_quantity,
+          tax_rates: taxRates,
+        }));
+        
+        return new Response(
+          JSON.stringify(transformedProducts),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      } else {
+        console.log('No results found in cache, falling back to WooCommerce API');
+        if (cacheError) {
+          console.error('Cache query error:', cacheError);
+        }
+      }
+    }
     
     let allProducts = [];
     
