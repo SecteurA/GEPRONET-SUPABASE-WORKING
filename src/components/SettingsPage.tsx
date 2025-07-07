@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, AlertCircle, CheckCircle, Settings } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { Save, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface WCSettings {
   id?: string;
@@ -9,25 +8,11 @@ interface WCSettings {
   consumer_secret: string;
 }
 
-interface InvoiceSettings {
-  id: string;
-  prefix: string;
-  year: number;
-  current_number: number;
-}
-
 const SettingsPage: React.FC = () => {
-  const [wcSettings, setWcSettings] = useState<WCSettings>({
+  const [settings, setSettings] = useState<WCSettings>({
     api_url: '',
     consumer_key: '',
     consumer_secret: '',
-  });
-
-  const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
-    id: '',
-    prefix: 'FA',
-    year: new Date().getFullYear(),
-    current_number: 1,
   });
 
   const [loading, setLoading] = useState(true);
@@ -36,16 +21,15 @@ const SettingsPage: React.FC = () => {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    fetchAllSettings();
+    fetchSettings();
   }, []);
 
-  const fetchAllSettings = async () => {
+  const fetchSettings = async () => {
     try {
       setLoading(true);
       setError('');
 
-      // Fetch WooCommerce settings
-      const wcResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wc-settings`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wc-settings`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
@@ -53,30 +37,15 @@ const SettingsPage: React.FC = () => {
         },
       });
 
-      const wcResult = await wcResponse.json();
+      const result = await response.json();
 
-      if (!wcResponse.ok) {
-        setError(wcResult.error || 'Erreur lors du chargement des paramètres WooCommerce');
+      if (!response.ok) {
+        setError(result.error || 'Erreur lors du chargement des paramètres');
         return;
       }
 
-      if (wcResult.api_url) {
-        setWcSettings(wcResult);
-      }
-
-      // Fetch Invoice settings
-      const { data: invoiceData, error: invoiceError } = await supabase
-        .from('invoice_settings')
-        .select('*')
-        .single();
-
-      if (invoiceError && invoiceError.code !== 'PGRST116') {
-        setError('Erreur lors du chargement des paramètres de facturation');
-        return;
-      }
-
-      if (invoiceData) {
-        setInvoiceSettings(invoiceData);
+      if (result.api_url) {
+        setSettings(result);
       }
     } catch (err) {
       setError('Erreur lors du chargement des paramètres');
@@ -85,63 +54,34 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-  const saveAllSettings = async () => {
+  const saveSettings = async () => {
     try {
       setSaving(true);
       setError('');
       setSuccess('');
 
-      // Validate WooCommerce settings
-      if (!wcSettings.api_url || !wcSettings.consumer_key || !wcSettings.consumer_secret) {
-        setError('Tous les champs WooCommerce sont requis');
+      if (!settings.api_url || !settings.consumer_key || !settings.consumer_secret) {
+        setError('Tous les champs sont requis');
         return;
       }
 
-      // Validate Invoice settings
-      if (!invoiceSettings.prefix.trim()) {
-        setError('Le préfixe de facturation est requis');
-        return;
-      }
-
-      if (invoiceSettings.current_number < 1) {
-        setError('Le numéro actuel doit être supérieur à 0');
-        return;
-      }
-
-      // Save WooCommerce settings
-      const wcResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wc-settings`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wc-settings`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(wcSettings),
+        body: JSON.stringify(settings),
       });
 
-      const wcResult = await wcResponse.json();
+      const result = await response.json();
 
-      if (!wcResponse.ok) {
-        setError(wcResult.error || 'Erreur lors de la sauvegarde des paramètres WooCommerce');
+      if (!response.ok) {
+        setError(result.error || 'Erreur lors de la sauvegarde');
         return;
       }
 
-      // Save Invoice settings
-      const { error: invoiceUpdateError } = await supabase
-        .from('invoice_settings')
-        .update({
-          prefix: invoiceSettings.prefix.trim().toUpperCase(),
-          year: invoiceSettings.year,
-          current_number: invoiceSettings.current_number,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', invoiceSettings.id);
-
-      if (invoiceUpdateError) {
-        setError('Erreur lors de la sauvegarde des paramètres de facturation');
-        return;
-      }
-
-      setSuccess('Tous les paramètres ont été sauvegardés avec succès');
+      setSuccess('Paramètres sauvegardés avec succès');
     } catch (err) {
       setError('Erreur lors de la sauvegarde');
     } finally {
@@ -149,17 +89,8 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-  const handleWcInputChange = (field: keyof WCSettings, value: string) => {
-    setWcSettings(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleInvoiceInputChange = (field: keyof InvoiceSettings, value: string | number) => {
-    setInvoiceSettings(prev => ({ ...prev, [field]: value }));
-    setError('');
-  };
-
-  const getNextInvoiceNumber = () => {
-    return `${invoiceSettings.prefix}-${invoiceSettings.year}${invoiceSettings.current_number.toString().padStart(4, '0')}`;
+  const handleInputChange = (field: keyof WCSettings, value: string) => {
+    setSettings(prev => ({ ...prev, [field]: value }));
   };
 
   if (loading) {
@@ -174,10 +105,10 @@ const SettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Paramètres</h1>
-        <p className="text-gray-600">Configuration de l'application</p>
+        <p className="text-gray-600">Configuration de l'API WooCommerce</p>
       </div>
 
       {/* Messages */}
@@ -194,12 +125,9 @@ const SettingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* WooCommerce Settings */}
+      {/* Settings Form */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center space-x-2 mb-6">
-          <Settings className="w-5 h-5 text-[#21522f]" />
-          <h2 className="text-lg font-semibold text-gray-900">Configuration WooCommerce</h2>
-        </div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-6">Configuration WooCommerce</h2>
         
         <div className="space-y-6">
           <div>
@@ -209,8 +137,8 @@ const SettingsPage: React.FC = () => {
             <input
               type="url"
               id="api_url"
-              value={wcSettings.api_url}
-              onChange={(e) => handleWcInputChange('api_url', e.target.value)}
+              value={settings.api_url}
+              onChange={(e) => handleInputChange('api_url', e.target.value)}
               placeholder="https://example.com/wp-json/wc/v3"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
             />
@@ -226,8 +154,8 @@ const SettingsPage: React.FC = () => {
             <input
               type="text"
               id="consumer_key"
-              value={wcSettings.consumer_key}
-              onChange={(e) => handleWcInputChange('consumer_key', e.target.value)}
+              value={settings.consumer_key}
+              onChange={(e) => handleInputChange('consumer_key', e.target.value)}
               placeholder="ck_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent font-mono text-sm"
             />
@@ -240,8 +168,8 @@ const SettingsPage: React.FC = () => {
             <input
               type="password"
               id="consumer_secret"
-              value={wcSettings.consumer_secret}
-              onChange={(e) => handleWcInputChange('consumer_secret', e.target.value)}
+              value={settings.consumer_secret}
+              onChange={(e) => handleInputChange('consumer_secret', e.target.value)}
               placeholder="cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent font-mono text-sm"
             />
@@ -260,85 +188,14 @@ const SettingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Invoice Settings */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center space-x-2 mb-6">
-          <Settings className="w-5 h-5 text-[#21522f]" />
-          <h2 className="text-lg font-semibold text-gray-900">Configuration de la Numérotation des Factures</h2>
-        </div>
-
-        <div className="space-y-6">
-          <div>
-            <label htmlFor="prefix" className="block text-sm font-medium text-gray-700 mb-2">
-              Préfixe
-            </label>
-            <input
-              type="text"
-              id="prefix"
-              value={invoiceSettings.prefix}
-              onChange={(e) => handleInvoiceInputChange('prefix', e.target.value.toUpperCase())}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
-              placeholder="FA"
-              maxLength={10}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Préfixe pour les numéros de facture (ex: FA, FACT, INV)
-            </p>
-          </div>
-
-          <div>
-            <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-2">
-              Année
-            </label>
-            <input
-              type="number"
-              id="year"
-              value={invoiceSettings.year}
-              onChange={(e) => handleInvoiceInputChange('year', parseInt(e.target.value) || new Date().getFullYear())}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
-              min="2000"
-              max="2099"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="current_number" className="block text-sm font-medium text-gray-700 mb-2">
-              Numéro actuel
-            </label>
-            <input
-              type="number"
-              id="current_number"
-              value={invoiceSettings.current_number}
-              onChange={(e) => handleInvoiceInputChange('current_number', parseInt(e.target.value) || 1)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
-              min="1"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Prochaine facture aura le numéro: <strong>{getNextInvoiceNumber()}</strong>
-            </p>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-blue-900 mb-2">Aperçu du format</h4>
-            <p className="text-sm text-blue-800">
-              Format: <strong>{invoiceSettings.prefix}-AAAA####</strong>
-            </p>
-            <p className="text-sm text-blue-800">
-              Exemple: <strong>{getNextInvoiceNumber()}</strong>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Save Button */}
       <div className="flex justify-end">
         <button
-          onClick={saveAllSettings}
+          onClick={saveSettings}
           disabled={saving}
-          className="flex items-center space-x-2 px-6 py-3 bg-[#21522f] text-white rounded-lg hover:bg-[#1a4025] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+          className="flex items-center space-x-2 px-6 py-2 bg-[#21522f] text-white rounded-lg hover:bg-[#1a4025] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
         >
-          <Save className="w-5 h-5" />
-          <span>{saving ? 'Sauvegarde en cours...' : 'Sauvegarder tous les paramètres'}</span>
+          <Save className="w-4 h-4" />
+          <span>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</span>
         </button>
       </div>
     </div>
