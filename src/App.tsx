@@ -10,12 +10,14 @@ import ClientsPage from './components/ClientsPage';
 import InvoicePage from './components/InvoicePage';
 import DeliveryNotePage from './components/DeliveryNotePage';
 import ReturnNotePage from './components/ReturnNotePage';
+import QuotePage from './components/QuotePage';
 
 function App() {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [preFilledInvoiceData, setPreFilledInvoiceData] = useState<any>(null);
   const [preFilledDeliveryNoteData, setPreFilledDeliveryNoteData] = useState<any>(null);
   const [preFilledReturnNoteData, setPreFilledReturnNoteData] = useState<any>(null);
+  const [preFilledQuoteData, setPreFilledQuoteData] = useState<any>(null);
 
   const handleGenerateInvoiceFromOrder = (orderData: any) => {
     setPreFilledInvoiceData(orderData);
@@ -30,6 +32,11 @@ function App() {
   const handleGenerateReturnNoteFromInvoice = (returnNoteData: any) => {
     setPreFilledReturnNoteData(returnNoteData);
     setActiveSection('retour');
+  };
+
+  const handleGenerateInvoiceFromQuote = (invoiceData: any) => {
+    setPreFilledInvoiceData(invoiceData);
+    setActiveSection('factures');
   };
 
   const renderContent = () => {
@@ -52,6 +59,12 @@ function App() {
         return <ReturnNotePage 
           preFilledData={preFilledReturnNoteData} 
           onClearPreFilled={() => setPreFilledReturnNoteData(null)} 
+        />;
+      case 'devis':
+        return <QuotePage 
+          preFilledData={preFilledQuoteData} 
+          onClearPreFilled={() => setPreFilledQuoteData(null)}
+          onGenerateInvoice={handleGenerateInvoiceFromQuote}
         />;
       case 'settings':
         return <SettingsPage />;
