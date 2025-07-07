@@ -37,8 +37,6 @@ interface Invoice {
   due_date: string;
   notes: string;
   line_items: InvoiceLineItem[];
-  source_order_id?: string;
-  source_type?: string;
 }
 
 interface InvoiceFormPageProps {
@@ -57,8 +55,6 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
     due_date: '',
     notes: '',
     line_items: [],
-    source_order_id: '',
-    source_type: 'manual',
   });
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -326,8 +322,6 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
           due_date: '',
           notes: '',
           line_items: [],
-          source_order_id: '',
-          source_type: 'manual',
         });
         setSuccess('');
         onBack(); // Go back to invoice list
