@@ -4,18 +4,20 @@
 
 /* Print styles */
 @media print {
-  /* Hide navigation elements */
+  /* Hide all navigation and UI elements */
   header,
-  .sidebar,
   aside,
   nav,
-  .print\\:hidden {
+  .print\\:hidden,
+  button:not(.print\\:show) {
     display: none !important;
   }
   
-  /* Hide action buttons and interactive elements */
-  button,
-  .print\\:hidden {
+  /* Hide specific layout components */
+  .min-h-screen > header,
+  .min-h-screen > aside,
+  [class*="fixed"][class*="top-"],
+  [class*="fixed"][class*="left-"] {
     display: none !important;
   }
   
@@ -24,14 +26,37 @@
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
+    margin-left: 0 !important;
+    padding-top: 0 !important;
   }
   
-  /* Remove shadows and borders for cleaner print */
+  /* Reset body and html for print */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    background: white !important;
+  }
+  
+  /* Remove shadows and unnecessary styling for print */
   .shadow-sm,
   .shadow-md,
   .shadow-lg,
-  .shadow-xl {
+  .shadow-xl,
+  .border,
+  .border-gray-200,
+  .border-gray-300 {
     box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
+  
+  /* Hide all buttons except those specifically marked for print */
+  button,
+  .btn,
+  input[type="button"],
+  input[type="submit"] {
+    display: none !important;
   }
   
   /* Ensure proper page breaks */
@@ -42,6 +67,11 @@
   /* Make sure tables print properly */
   table {
     page-break-inside: auto;
+    border-collapse: collapse !important;
+  }
+  
+  table, th, td {
+    border: 1px solid #333 !important;
   }
   
   tr {
@@ -51,11 +81,48 @@
   
   /* Adjust font sizes for print */
   body {
-    font-size: 12pt;
+    font-size: 11pt;
     line-height: 1.4;
+    color: #000 !important;
   }
   
-  h1 { font-size: 18pt; }
-  h2 { font-size: 16pt; }
-  h3 { font-size: 14pt; }
+  h1 { 
+    font-size: 18pt !important; 
+    color: #000 !important;
+  }
+  h2 { 
+    font-size: 16pt !important; 
+    color: #000 !important;
+  }
+  h3 { 
+    font-size: 14pt !important; 
+    color: #000 !important;
+  }
+  
+  /* Ensure invoice content is visible and properly formatted */
+  .bg-white {
+    background: white !important;
+  }
+  
+  /* Make sure text is black for print */
+  * {
+    color: #000 !important;
+    background: transparent !important;
+  }
+  
+  /* Preserve some colors for branding */
+  .text-\\[\\#21522f\\] {
+    color: #21522f !important;
+  }
+  
+  /* Ensure table headers are visible */
+  thead tr {
+    background: #f5f5f5 !important;
+  }
+  
+  /* Page margins for better print layout */
+  @page {
+    margin: 1cm;
+    size: A4;
+  }
 }
