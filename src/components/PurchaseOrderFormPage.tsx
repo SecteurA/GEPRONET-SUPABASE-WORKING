@@ -444,9 +444,10 @@ const PurchaseOrderFormPage: React.FC<PurchaseOrderFormPageProps> = ({ onBack, p
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Tapez au moins 3 caractères pour rechercher..."
+                  placeholder="Tapez au moins 2 caractères pour rechercher..."
                   value={productSearch}
                   onChange={(e) => handleSearchChange(e.target.value)}
+                  autoFocus
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
                 />
               </div>
