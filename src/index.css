@@ -54,18 +54,15 @@
   .shadow-sm,
   .shadow-md,
   .shadow-lg,
-  .shadow-xl,
-  .border,
-  .border-gray-200,
-  .border-gray-300 {
+  .shadow-xl {
     box-shadow: none !important;
   }
   
-  /* Ensure borders are visible for tables */
-  table,
-  th,
-  td {
-    border: 1px solid #333 !important;
+  /* Remove rounded corners for print */
+  .rounded-lg,
+  .rounded-md,
+  .rounded {
+    border-radius: 0 !important;
   }
   
   /* Hide all buttons except those specifically marked for print */
@@ -81,34 +78,97 @@
     break-inside: avoid;
   }
   
-  /* Make sure tables print properly */
+  /* Table-specific print styles */
   table {
-    page-break-inside: auto;
+    width: 100% !important;
     border-collapse: collapse !important;
+    page-break-inside: auto !important;
+    margin: 0 !important;
+    font-size: 11pt !important;
   }
   
-  tr {
-    page-break-inside: avoid;
-    page-break-after: auto;
+  /* Table borders */
+  table,
+  table th,
+  table td {
+    border: 1px solid #000 !important;
+  }
+  
+  /* Table headers */
+  table thead {
+    display: table-header-group !important;
+  }
+  
+  table thead tr {
+    background: #f5f5f5 !important;
+    break-inside: avoid !important;
+  }
+  
+  table thead th {
+    background: #f5f5f5 !important;
+    color: #000 !important;
+    font-weight: bold !important;
+    padding: 8px !important;
+    text-align: left !important;
+    border: 1px solid #000 !important;
+  }
+  
+  /* Table body */
+  table tbody tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  
+  table tbody td {
+    padding: 8px !important;
+    color: #000 !important;
+    border: 1px solid #000 !important;
+    background: white !important;
+  }
+  
+  /* Specific table cell alignments */
+  table th.text-center,
+  table td.text-center {
+    text-align: center !important;
+  }
+  
+  table th.text-right,
+  table td.text-right {
+    text-align: right !important;
+  }
+  
+  table th.text-left,
+  table td.text-left {
+    text-align: left !important;
   }
   
   /* Adjust font sizes for print */
   body {
-    font-size: 11pt;
-    line-height: 1.4;
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
     color: #000 !important;
   }
   
   h1 { 
     font-size: 18pt !important; 
     color: #000 !important;
+    margin: 0 0 10pt 0 !important;
   }
+  
   h2 { 
     font-size: 16pt !important; 
     color: #000 !important;
+    margin: 0 0 8pt 0 !important;
   }
+  
   h3 { 
     font-size: 14pt !important; 
+    color: #000 !important;
+    margin: 0 0 6pt 0 !important;
+  }
+  
+  p {
+    margin: 0 0 6pt 0 !important;
     color: #000 !important;
   }
   
@@ -117,10 +177,11 @@
     background: white !important;
   }
   
-  /* Make sure text is black for print */
-  * {
-    color: #000 !important;
-    background: transparent !important;
+  /* Override spacing issues */
+  .space-y-6 > * + *,
+  .space-y-4 > * + *,
+  .space-y-2 > * + * {
+    margin-top: 0 !important;
   }
   
   /* Preserve some colors for branding */
@@ -128,25 +189,95 @@
     color: #21522f !important;
   }
   
-  /* Ensure table headers are visible */
-  thead tr {
-    background: #f5f5f5 !important;
+  /* Ensure proper text colors - be more specific than the global override */
+  .text-gray-900,
+  .text-gray-800,
+  .text-gray-700 {
+    color: #000 !important;
   }
   
-  /* Override any remaining layout issues */
-  .space-y-6 > * + * {
-    margin-top: 0 !important;
+  .text-gray-600,
+  .text-gray-500 {
+    color: #333 !important;
   }
   
-  /* Ensure proper spacing for invoice content */
-  .rounded-lg {
-    border-radius: 0 !important;
+  /* Remove hover effects for print */
+  .hover\\:bg-gray-50:hover,
+  .hover\\:bg-gray-100:hover {
+    background: transparent !important;
   }
   
-  /* Hide any remaining non-essential elements */
-  .transition-colors,
-  .duration-200,
-  .hover\\:bg-gray-50:hover {
+  /* Remove transitions for print */
+  * {
     transition: none !important;
+    animation: none !important;
+  }
+  
+  /* Make sure borders show properly */
+  .border,
+  .border-gray-200,
+  .border-gray-300 {
+    border: 1px solid #ccc !important;
+  }
+  
+  .border-t {
+    border-top: 1px solid #ccc !important;
+  }
+  
+  .border-b {
+    border-bottom: 1px solid #ccc !important;
+  }
+  
+  /* Ensure proper margin and padding for print layout */
+  .p-6,
+  .p-8 {
+    padding: 12pt !important;
+  }
+  
+  .p-4 {
+    padding: 8pt !important;
+  }
+  
+  .p-3 {
+    padding: 6pt !important;
+  }
+  
+  .px-4 {
+    padding-left: 8pt !important;
+    padding-right: 8pt !important;
+  }
+  
+  .py-3 {
+    padding-top: 6pt !important;
+    padding-bottom: 6pt !important;
+  }
+  
+  .mb-4 {
+    margin-bottom: 8pt !important;
+  }
+  
+  .mb-6 {
+    margin-bottom: 12pt !important;
+  }
+  
+  .mb-8 {
+    margin-bottom: 16pt !important;
+  }
+  
+  /* Ensure grid layouts work in print */
+  .grid {
+    display: table !important;
+    width: 100% !important;
+  }
+  
+  .grid-cols-1,
+  .grid-cols-2 {
+    display: table-row !important;
+  }
+  
+  .grid > div {
+    display: table-cell !important;
+    vertical-align: top !important;
+    padding: 6pt !important;
   }
 }
