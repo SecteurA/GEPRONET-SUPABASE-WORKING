@@ -39,6 +39,11 @@ const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFill
     setViewMode('detail');
   };
 
+  const handleGenerateDeliveryNote = (invoice: any) => {
+    // You could implement navigation to delivery notes here if needed
+    console.log('Delivery note generated for invoice:', invoice.id);
+  };
+
   switch (viewMode) {
     case 'form':
       return <InvoiceFormPage onBack={handleBackToList} preFilledData={preFilledData} />;
@@ -49,6 +54,7 @@ const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFill
         <InvoiceListPage
           onCreateNew={handleCreateNew}
           onViewInvoice={handleViewInvoice}
+          onGenerateDeliveryNote={handleGenerateDeliveryNote}
         />
       );
   }

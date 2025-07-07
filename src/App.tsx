@@ -8,6 +8,7 @@ import VentesPage from './components/VentesPage';
 import SettingsPage from './components/SettingsPage';
 import ClientsPage from './components/ClientsPage';
 import InvoicePage from './components/InvoicePage';
+import DeliveryNotePage from './components/DeliveryNotePage';
 
 function App() {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -24,6 +25,8 @@ function App() {
         return <VentesPage onGenerateInvoice={handleGenerateInvoiceFromOrder} />;
       case 'factures':
         return <InvoicePage preFilledData={preFilledInvoiceData} onClearPreFilled={() => setPreFilledInvoiceData(null)} />;
+      case 'livraison':
+        return <DeliveryNotePage />;
       case 'settings':
         return <SettingsPage />;
       case 'clients':
