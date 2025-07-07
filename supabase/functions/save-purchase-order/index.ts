@@ -50,6 +50,8 @@ Deno.serve(async (req: Request) => {
 
     const purchaseOrderData: PurchaseOrderData = await req.json();
 
+    console.log('Received purchase order data:', JSON.stringify(purchaseOrderData));
+    
     // Validate required fields
     if (!purchaseOrderData.supplier_name || !purchaseOrderData.line_items || purchaseOrderData.line_items.length === 0) {
       return new Response(

@@ -49,17 +49,27 @@ Deno.serve(async (req: Request) => {
     // Fetch products from WooCommerce API
     const wcAuth = btoa(`${settings.consumer_key}:${settings.consumer_secret}`);
     
-    // Get URL parameters for pagination and search
+    // Get URL parameters for search
     const url = new URL(req.url);
-    const page = url.searchParams.get('page') || '1';
-    const per_page = url.searchParams.get('per_page') || '50';
     const search = url.searchParams.get('search') || '';
     
-    let allProducts = [];
-    
     if (search) {
-      // Search by name first
-      const nameSearchUrl = `${settings.api_url}/products?page=${page}&per_page=${per_page}&status=publish&search=${encodeURIComponent(search)}`;
+      // Optimize search to use a single API call with more efficient parameters
+      let queryParams = new URLSearchParams({
+        status: 'publish',
+        per_page: '20', // Limit results to improve performance
+      });
+      
+      // For SKU-like searches, use sku parameter which is more efficient
+      if (search.length <= 20 && /^[a-zA-Z0-9\-_]+$/.test(search)) {
+        queryParams.append('sku', search);
+      } else {
+        queryParams.append('search', search);
+      }
+      
+      const nameSearchUrl = `${settings.api_url}/products?${queryParams.toString()}`;
+      console.log(`Searching WooCommerce with URL: ${nameSearchUrl}`);
+      
       const nameResponse = await fetch(nameSearchUrl, {
         headers: {
           'Authorization': `Basic ${wcAuth}`,
@@ -67,53 +77,22 @@ Deno.serve(async (req: Request) => {
         },
       });
 
-      if (nameResponse.ok) {
-        const nameProducts = await nameResponse.json();
-        allProducts.push(...nameProducts);
-      }
-
-      // Search by SKU if search term looks like an SKU (alphanumeric, short)
-      if (search.length <= 20 && /^[a-zA-Z0-9\-_]+$/.test(search)) {
-        const skuSearchUrl = `${settings.api_url}/products?page=${page}&per_page=${per_page}&status=publish&sku=${encodeURIComponent(search)}`;
-        const skuResponse = await fetch(skuSearchUrl, {
-          headers: {
-            'Authorization': `Basic ${wcAuth}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (skuResponse.ok) {
-          const skuProducts = await skuResponse.json();
-          allProducts.push(...skuProducts);
-        }
-      }
-
-      // Also try partial SKU matches by searching all products and filtering client-side
-      const partialSkuUrl = `${settings.api_url}/products?page=1&per_page=100&status=publish`;
-      const partialResponse = await fetch(partialSkuUrl, {
-        headers: {
-          'Authorization': `Basic ${wcAuth}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (partialResponse.ok) {
-        const allProductsForSku = await partialResponse.json();
-        const skuMatches = allProductsForSku.filter((product: any) => 
-          product.sku && product.sku.toLowerCase().includes(search.toLowerCase())
+      if (!nameResponse.ok) {
+        const errorText = await nameResponse.text();
+        console.error('WooCommerce API Error:', errorText);
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch products from WooCommerce' }),
+          {
+            status: nameResponse.status,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
         );
-        allProducts.push(...skuMatches);
       }
-
-      // Remove duplicates based on product ID
-      const uniqueProducts = allProducts.filter((product, index, self) => 
-        index === self.findIndex(p => p.id === product.id)
-      );
-      allProducts = uniqueProducts;
-
+      
+      const allProducts = await nameResponse.json();
     } else {
       // No search term, get regular products
-      const wcUrl = `${settings.api_url}/products?page=${page}&per_page=${per_page}&status=publish`;
+      const wcUrl = `${settings.api_url}/products?per_page=20&status=publish`;
       const wcResponse = await fetch(wcUrl, {
         headers: {
           'Authorization': `Basic ${wcAuth}`,
@@ -136,17 +115,25 @@ Deno.serve(async (req: Request) => {
       allProducts = await wcResponse.json();
     }
 
-    // Fetch tax rates from WooCommerce API to get actual VAT percentages
-    const taxRatesResponse = await fetch(`${settings.api_url}/taxes`, {
-      headers: {
-        'Authorization': `Basic ${wcAuth}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
     let taxRates = [];
-    if (taxRatesResponse.ok) {
-      taxRates = await taxRatesResponse.json();
+    
+    try {
+      // Only fetch tax rates if we have products
+      if (allProducts && allProducts.length > 0) {
+        const taxRatesResponse = await fetch(`${settings.api_url}/taxes?per_page=100`, {
+          headers: {
+            'Authorization': `Basic ${wcAuth}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (taxRatesResponse.ok) {
+          taxRates = await taxRatesResponse.json();
+        }
+      }
+    } catch (taxError) {
+      console.error('Error fetching tax rates:', taxError);
+      // Continue without tax rates if there's an error
     }
 
     // Transform products to include only necessary fields

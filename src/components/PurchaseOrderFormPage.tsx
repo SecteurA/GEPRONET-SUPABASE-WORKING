@@ -105,7 +105,8 @@ const PurchaseOrderFormPage: React.FC<PurchaseOrderFormPageProps> = ({ onBack, p
 
   // Debounced search function
   const fetchProducts = async (searchTerm: string) => {
-    if (searchTerm.length < 3) {
+    // Reduced minimum length to 2 characters for faster search
+    if (searchTerm.length < 2) {
       setProducts([]);
       return;
     }
@@ -460,12 +461,12 @@ const PurchaseOrderFormPage: React.FC<PurchaseOrderFormPageProps> = ({ onBack, p
               ) : !searchTouched ? (
                 <div className="text-center py-8 text-gray-500">
                   <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <p>Tapez au moins 3 caractères pour rechercher des produits</p>
+                  <p>Tapez au moins 2 caractères pour rechercher des produits</p>
                   <p className="text-sm mt-2">Recherche par nom ou référence (SKU)</p>
                 </div>
-              ) : productSearch.length < 3 ? (
+              ) : productSearch.length < 2 ? (
                 <div className="text-center py-8 text-gray-500">
-                  <p>Tapez au moins 3 caractères pour lancer la recherche</p>
+                  <p>Tapez au moins 2 caractères pour lancer la recherche</p>
                 </div>
               ) : products.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4">
@@ -492,11 +493,12 @@ const PurchaseOrderFormPage: React.FC<PurchaseOrderFormPageProps> = ({ onBack, p
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                type="text" 
+                placeholder="Tapez au moins 2 caractères pour rechercher..."
                   <p>Aucun produit trouvé pour "{productSearch}"</p>
                   <p className="text-sm mt-2">Essayez avec d'autres mots-clés</p>
-                </div>
+                autoFocus
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"                
               )}
             </div>
           </div>
