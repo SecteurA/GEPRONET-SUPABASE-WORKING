@@ -56,6 +56,7 @@ const InvoicePage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const fetchProducts = async () => {
     try {
@@ -188,6 +189,63 @@ const InvoicePage: React.FC = () => {
 
   const { subtotalHT, totalVAT, totalTTC } = calculateTotals();
 
+  const saveInvoice = async () => {
+    try {
+      setSaving(true);
+      setError('');
+      setSuccess('');
+
+      // Validate required fields
+      if (!invoice.customer_name.trim()) {
+        setError('Le nom du client est requis');
+        return;
+      }
+
+      if (invoice.line_items.length === 0) {
+        setError('Au moins un article est requis');
+        return;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-invoice`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(invoice),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result.error || 'Erreur lors de la sauvegarde de la facture');
+        return;
+      }
+
+      setSuccess(`Facture ${result.invoice.invoice_number} créée avec succès`);
+      
+      // Reset form after successful save
+      setTimeout(() => {
+        setInvoice({
+          customer_name: '',
+          customer_email: '',
+          customer_phone: '',
+          customer_address: '',
+          invoice_date: new Date().toISOString().split('T')[0],
+          due_date: '',
+          notes: '',
+          line_items: [],
+        });
+        setSuccess('');
+      }, 3000);
+
+    } catch (err) {
+      setError('Erreur lors de la sauvegarde de la facture');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -208,10 +266,12 @@ const InvoicePage: React.FC = () => {
             <span>Ajouter Produit</span>
           </button>
           <button
+            onClick={saveInvoice}
+            disabled={saving || invoice.line_items.length === 0 || !invoice.customer_name.trim()}
             className="flex items-center space-x-2 px-4 py-2 bg-[#21522f] text-white rounded-lg hover:bg-[#1a4025] transition-colors duration-200"
           >
             <Save className="w-4 h-4" />
-            <span>Sauvegarder</span>
+            <span>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</span>
           </button>
         </div>
       </div>
