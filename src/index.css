@@ -39,6 +39,17 @@
     background: white !important;
   }
   
+  /* Configure page settings to minimize browser headers/footers */
+  @page {
+    margin: 0.5in 0.5in 0.5in 0.5in;
+    size: A4;
+  }
+  
+  /* Hide page title and URL that browsers add */
+  @page :first {
+    margin-top: 0.5in;
+  }
+  
   /* Remove shadows and unnecessary styling for print */
   .shadow-sm,
   .shadow-md,
@@ -48,7 +59,13 @@
   .border-gray-200,
   .border-gray-300 {
     box-shadow: none !important;
-    border: 1px solid #ddd !important;
+  }
+  
+  /* Ensure borders are visible for tables */
+  table,
+  th,
+  td {
+    border: 1px solid #333 !important;
   }
   
   /* Hide all buttons except those specifically marked for print */
@@ -68,10 +85,6 @@
   table {
     page-break-inside: auto;
     border-collapse: collapse !important;
-  }
-  
-  table, th, td {
-    border: 1px solid #333 !important;
   }
   
   tr {
@@ -120,9 +133,20 @@
     background: #f5f5f5 !important;
   }
   
-  /* Page margins for better print layout */
-  @page {
-    margin: 1cm;
-    size: A4;
+  /* Override any remaining layout issues */
+  .space-y-6 > * + * {
+    margin-top: 0 !important;
+  }
+  
+  /* Ensure proper spacing for invoice content */
+  .rounded-lg {
+    border-radius: 0 !important;
+  }
+  
+  /* Hide any remaining non-essential elements */
+  .transition-colors,
+  .duration-200,
+  .hover\\:bg-gray-50:hover {
+    transition: none !important;
   }
 }
