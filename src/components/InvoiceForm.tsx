@@ -154,19 +154,30 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoice, onSubmit, onCancel, 
       // Convert order line items to invoice line items with VAT calculations
       if (orderLineItems && orderLineItems.length > 0) {
         const convertedItems = orderLineItems.map(item => {
-          // Determine VAT rate based on tax_class
-          let vatRate = 20.00; // Default VAT rate
-          if (item.tax_class && item.tax_class.toLowerCase().includes('exonerer')) {
-            vatRate = 0.00;
-          } else if (item.tax_class && item.tax_class.toLowerCase().includes('reduced')) {
-            vatRate = 10.00;
+          // Use calculated VAT rate from WooCommerce data or fall back to calculation
+          let vatRate = item.calculated_vat_rate || 0.00;
+          
+          // If we don't have calculated rate, try to determine from tax data
+          if (vatRate === 0 && item.subtotal > 0 && item.tax_total > 0) {
+            vatRate = Math.round((item.tax_total / item.subtotal) * 100 * 100) / 100;
+          }
+          
+          // If still no rate, fall back to tax class logic
+          if (vatRate === 0) {
+            if (item.tax_class && item.tax_class.toLowerCase().includes('exonerer')) {
+              vatRate = 0.00;
+            } else if (item.tax_class && item.tax_class.toLowerCase().includes('reduced')) {
+              vatRate = 10.00;
+            } else if (item.tax_class && (item.tax_class.toLowerCase().includes('standard') || !item.tax_class)) {
+              vatRate = 20.00;
+            } else {
+              vatRate = 20.00; // Default fallback
+            }
           }
 
-          // Calculate HT price from the total price (assuming WooCommerce stores TTC prices)
-          const unitPriceHT = item.price; // Assuming WC price is already HT
-          const totalPriceHT = item.subtotal; // Use subtotal which should be HT
-          const vatAmount = item.tax_total; // Use the actual tax amount from WC
-
+          const unitPriceHT = item.price; // WC price should be HT
+          const totalPriceHT = item.subtotal; // Subtotal is HT
+          const vatAmount = item.tax_total; // Actual tax amount from WC
           return {
             product_name: item.product_name,
             product_sku: item.product_sku || '',
@@ -685,7 +696,10 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoice, onSubmit, onCancel, 
                           <div className="text-sm text-gray-500">
                             {item.product_sku && `SKU: ${item.product_sku} • `}
                             Prix: {item.price?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DH HT • 
-                            TVA: {item.vat_rate}%
+                            TVA: {item.calculated_vat_rate ? 
+                              `${item.calculated_vat_rate.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}%` : 
+                              `${item.vat_rate || 20}%`
+                            }
                           </div>
                         </div>
                       ))}
