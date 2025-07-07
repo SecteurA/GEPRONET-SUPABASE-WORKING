@@ -216,7 +216,7 @@
   /* Make sure borders show properly */
   .border,
   .border-gray-200,
-  .border-gray-300 {
+  .border-gray-300:not(table):not(th):not(td) {
     border: none !important;
   }
   
@@ -243,6 +243,23 @@
     box-shadow: none !important;
     border: none !important;
   }
+  
+  /* Ensure table borders are always visible - override general border removal */
+  table.w-full,
+  table.w-full th,
+  table.w-full td,
+  .border-collapse table,
+  .border-collapse th,
+  .border-collapse td {
+    border: 1px solid #000 !important;
+  }
+  
+  /* Make table borders even more specific */
+  div table,
+  div table th,
+  div table td {
+    border: 1px solid #000 !important;
+  }</Action>
   
   /* Ensure proper margin and padding for print layout */
   .p-6,
