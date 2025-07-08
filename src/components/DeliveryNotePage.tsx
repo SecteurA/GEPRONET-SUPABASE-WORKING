@@ -8,9 +8,10 @@ type ViewMode = 'list' | 'form' | 'detail' | 'edit';
 
 interface DeliveryNotePageProps {
   onGenerateInvoice?: (invoiceData: any) => void;
+  onViewInvoice?: (invoiceId: string) => void;
 }
 
-const DeliveryNotePage: React.FC<DeliveryNotePageProps> = ({ onGenerateInvoice }) => {
+const DeliveryNotePage: React.FC<DeliveryNotePageProps> = ({ onGenerateInvoice, onViewInvoice }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedDeliveryNoteId, setSelectedDeliveryNoteId] = useState<string | null>(null);
 
@@ -68,6 +69,7 @@ const DeliveryNotePage: React.FC<DeliveryNotePageProps> = ({ onGenerateInvoice }
           onViewDeliveryNote={handleViewDeliveryNote}
           onEditDeliveryNote={handleEditDeliveryNote}
           onGenerateInvoice={onGenerateInvoice}
+          onViewInvoice={onViewInvoice}
         />
       );
   }

@@ -9,11 +9,12 @@ type ViewMode = 'list' | 'form' | 'detail' | 'edit';
 interface InvoicePageProps {
   preFilledData?: any;
   onClearPreFilled?: () => void;
+  selectedInvoiceId?: string | null;
 }
 
-const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFilled }) => {
+const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFilled, selectedInvoiceId }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [currentInvoiceId, setCurrentInvoiceId] = useState<string | null>(null);
 
   // If we have pre-filled data, go to form mode immediately
   React.useEffect(() => {
@@ -22,13 +23,21 @@ const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFill
     }
   }, [preFilledData]);
 
+  // If we have a selected invoice ID, go to detail mode immediately
+  React.useEffect(() => {
+    if (selectedInvoiceId) {
+      setCurrentInvoiceId(selectedInvoiceId);
+      setViewMode('detail');
+    }
+  }, [selectedInvoiceId]);
+
   const handleCreateNew = () => {
     setViewMode('form');
   };
 
   const handleBackToList = () => {
     setViewMode('list');
-    setSelectedInvoiceId(null);
+    setCurrentInvoiceId(null);
     // Clear pre-filled data when going back to list
     if (onClearPreFilled) {
       onClearPreFilled();
@@ -36,12 +45,12 @@ const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFill
   };
 
   const handleViewInvoice = (invoiceId: string) => {
-    setSelectedInvoiceId(invoiceId);
+    setCurrentInvoiceId(invoiceId);
     setViewMode('detail');
   };
 
   const handleEditInvoice = (invoiceId: string) => {
-    setSelectedInvoiceId(invoiceId);
+    setCurrentInvoiceId(invoiceId);
     setViewMode('edit');
   };
 
@@ -70,9 +79,9 @@ const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFill
     case 'form':
       return <InvoiceFormPage onBack={handleBackToList} preFilledData={preFilledData} />;
     case 'edit':
-      return <InvoiceEditPage invoiceId={selectedInvoiceId!} onBack={handleBackToList} />;
+      return <InvoiceEditPage invoiceId={currentInvoiceId!} onBack={handleBackToList} />;
     case 'detail':
-      return <InvoiceDetailPage invoiceId={selectedInvoiceId!} onBack={handleBackToList} />;
+      return <InvoiceDetailPage invoiceId={currentInvoiceId!} onBack={handleBackToList} />;
     default:
       return (
         <InvoiceListPage

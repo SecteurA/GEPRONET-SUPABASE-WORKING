@@ -19,19 +19,29 @@ function App() {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [preFilledInvoiceData, setPreFilledInvoiceData] = useState<any>(null);
   const [preFilledQuoteData, setPreFilledQuoteData] = useState<any>(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
   const handleGenerateInvoiceFromOrder = (orderData: any) => {
     setPreFilledInvoiceData(orderData);
+    setSelectedInvoiceId(null);
     setActiveSection('factures');
   };
 
   const handleGenerateInvoiceFromDeliveryNotes = (invoiceData: any) => {
     setPreFilledInvoiceData(invoiceData);
+    setSelectedInvoiceId(null);
     setActiveSection('factures');
   };
 
   const handleGenerateInvoiceFromQuote = (invoiceData: any) => {
     setPreFilledInvoiceData(invoiceData);
+    setSelectedInvoiceId(null);
+    setActiveSection('factures');
+  };
+
+  const handleViewInvoiceFromDeliveryNote = (invoiceId: string) => {
+    setPreFilledInvoiceData(null);
+    setSelectedInvoiceId(invoiceId);
     setActiveSection('factures');
   };
 
@@ -44,10 +54,17 @@ function App() {
       case 'factures':
         return <InvoicePage 
           preFilledData={preFilledInvoiceData} 
-          onClearPreFilled={() => setPreFilledInvoiceData(null)}
+          onClearPreFilled={() => {
+            setPreFilledInvoiceData(null);
+            setSelectedInvoiceId(null);
+          }}
+          selectedInvoiceId={selectedInvoiceId}
         />;
       case 'livraison':
-        return <DeliveryNotePage onGenerateInvoice={handleGenerateInvoiceFromDeliveryNotes} />;
+        return <DeliveryNotePage 
+          onGenerateInvoice={handleGenerateInvoiceFromDeliveryNotes}
+          onViewInvoice={handleViewInvoiceFromDeliveryNote}
+        />;
       case 'retour':
         return <ReturnNotePage />;
       case 'devis':
