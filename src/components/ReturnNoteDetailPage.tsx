@@ -243,14 +243,20 @@ const ReturnNoteDetailPage: React.FC<ReturnNoteDetailPageProps> = ({ returnNoteI
       {/* Return Note Layout */}
       <div className="bg-white shadow-sm border border-gray-200 rounded-lg p-8 print:shadow-none print:border-none">
         {/* Header */}
-        <div className="border-b border-gray-200 pb-6 mb-6">
+        <div className="pb-3 mb-3">
           <div className="flex justify-between items-start">
             <div>
-              <img 
-                src="https://pub-237d2da54b564d23aaa1c3826e1d4e65.r2.dev/gepronet/gepronet.png" 
-                alt="Gepronet Logo" 
-                className="w-48 h-auto mb-4"
-              />
+              <div className="w-64 text-center text-sm leading-tight mb-4">
+                <div className="font-bold text-lg text-gray-900">GETRADIS</div>
+                <div className="font-semibold text-gray-800">Magasin Gepronet</div>
+                <div className="text-gray-700 mt-1">111, Avenue Mohamed Belhassan</div>
+                <div className="text-gray-700">Elouazani - RABAT</div>
+                <div className="text-gray-700 mt-1">Patente : 25903587 - R. C. : 29149</div>
+                <div className="text-gray-700">I. F. : 03315202</div>
+                <div className="text-gray-700 mt-1">Tél : 0537654006</div>
+                <div className="text-gray-700">Fax: 0537756864</div>
+                <div className="text-gray-700">e-mail : contact@gepronet.com</div>
+              </div>
             </div>
             <div className="text-right">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">BON DE RETOUR</h1>
@@ -302,36 +308,20 @@ const ReturnNoteDetailPage: React.FC<ReturnNoteDetailPageProps> = ({ returnNoteI
         </div>
 
         {/* Customer Information */}
-        <div className="mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Client:</h3>
-              <div className="text-gray-700">
-                <p className="font-semibold">{returnNote.customer_name}</p>
-                {returnNote.customer_email && <p>{returnNote.customer_email}</p>}
-                {returnNote.customer_phone && <p>{returnNote.customer_phone}</p>}
-                {returnNote.customer_address && (
-                  <p className="mt-2 whitespace-pre-line">{returnNote.customer_address}</p>
-                )}
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Détails du retour:</h3>
-              <div className="text-gray-700 space-y-1">
-                <p><span className="font-medium">Numéro:</span> {returnNote.return_note_number}</p>
-                <p><span className="font-medium">Date de retour:</span> {formatDate(returnNote.return_date)}</p>
-                <p><span className="font-medium">Statut:</span> <span className="capitalize">{getStatusText(returnNote.status)}</span></p>
-                {returnNote.reason && (
-                  <p><span className="font-medium">Motif:</span> {returnNote.reason}</p>
-                )}
-              </div>
+        <div className="mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Client:</h3>
+            <div className="text-gray-700">
+              <p className="font-semibold">{returnNote.customer_name}</p>
+              {returnNote.customer_address && (
+                <p className="mt-1 whitespace-pre-line">{returnNote.customer_address}</p>
+              )}
             </div>
           </div>
         </div>
 
         {/* Line Items Table */}
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Articles retournés</h3>
+        <div className="mb-6">
           {returnNote.line_items && returnNote.line_items.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse border border-gray-300">
@@ -339,7 +329,10 @@ const ReturnNoteDetailPage: React.FC<ReturnNoteDetailPageProps> = ({ returnNoteI
                   <tr className="bg-gray-50">
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Référence</th>
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Article</th>
-                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">Quantité retournée</th>
+                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">
+                      <span className="print:hidden">Quantité Retournée</span>
+                      <span className="hidden print:inline">Qte Ret.</span>
+                    </th>
                     <th className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">Prix Unit. HT</th>
                     <th className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">Total HT</th>
                   </tr>
@@ -390,11 +383,6 @@ const ReturnNoteDetailPage: React.FC<ReturnNoteDetailPageProps> = ({ returnNoteI
           </div>
         )}
 
-        {/* Footer */}
-        <div className="mt-12 pt-6 border-t border-gray-200 text-center text-sm text-gray-600">
-          <p>Merci pour votre compréhension!</p>
-          <p className="mt-2">Gepronet - Gestion Professionnelle</p>
-        </div>
       </div>
     </div>
   );

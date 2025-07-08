@@ -329,14 +329,20 @@ const PurchaseOrderDetailPage: React.FC<PurchaseOrderDetailPageProps> = ({ purch
       {/* Purchase Order Layout */}
       <div className="bg-white shadow-sm border border-gray-200 rounded-lg p-8 print:shadow-none print:border-none">
         {/* Header */}
-        <div className="border-b border-gray-200 pb-6 mb-6">
+        <div className="pb-3 mb-3">
           <div className="flex justify-between items-start">
             <div>
-              <img 
-                src="https://pub-237d2da54b564d23aaa1c3826e1d4e65.r2.dev/gepronet/gepronet.png" 
-                alt="Gepronet Logo" 
-                className="w-48 h-auto mb-4"
-              />
+              <div className="w-64 text-center text-sm leading-tight mb-4">
+                <div className="font-bold text-lg text-gray-900">GETRADIS</div>
+                <div className="font-semibold text-gray-800">Magasin Gepronet</div>
+                <div className="text-gray-700 mt-1">111, Avenue Mohamed Belhassan</div>
+                <div className="text-gray-700">Elouazani - RABAT</div>
+                <div className="text-gray-700 mt-1">Patente : 25903587 - R. C. : 29149</div>
+                <div className="text-gray-700">I. F. : 03315202</div>
+                <div className="text-gray-700 mt-1">Tél : 0537654006</div>
+                <div className="text-gray-700">Fax: 0537756864</div>
+                <div className="text-gray-700">e-mail : contact@gepronet.com</div>
+              </div>
             </div>
             <div className="text-right">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">BON DE COMMANDE</h1>
@@ -392,36 +398,20 @@ const PurchaseOrderDetailPage: React.FC<PurchaseOrderDetailPageProps> = ({ purch
         </div>
 
         {/* Supplier Information */}
-        <div className="mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Fournisseur:</h3>
-              <div className="text-gray-700">
-                <p className="font-semibold">{purchaseOrder.supplier_name}</p>
-                {purchaseOrder.supplier_email && <p>{purchaseOrder.supplier_email}</p>}
-                {purchaseOrder.supplier_phone && <p>{purchaseOrder.supplier_phone}</p>}
-                {purchaseOrder.supplier_address && (
-                  <p className="mt-2 whitespace-pre-line">{purchaseOrder.supplier_address}</p>
-                )}
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Détails de la commande:</h3>
-              <div className="text-gray-700 space-y-1">
-                <p><span className="font-medium">Numéro:</span> {purchaseOrder.purchase_order_number}</p>
-                <p><span className="font-medium">Date de commande:</span> {formatDate(purchaseOrder.order_date)}</p>
-                {purchaseOrder.expected_date && (
-                  <p><span className="font-medium">Livraison prévue:</span> {formatDate(purchaseOrder.expected_date)}</p>
-                )}
-                <p><span className="font-medium">Statut:</span> <span className="capitalize">{getStatusText(purchaseOrder.status)}</span></p>
-              </div>
+        <div className="mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Fournisseur:</h3>
+            <div className="text-gray-700">
+              <p className="font-semibold">{purchaseOrder.supplier_name}</p>
+              {purchaseOrder.supplier_address && (
+                <p className="mt-1 whitespace-pre-line">{purchaseOrder.supplier_address}</p>
+              )}
             </div>
           </div>
         </div>
 
         {/* Line Items Table */}
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Articles commandés</h3>
+        <div className="mb-6">
           {purchaseOrder.line_items && purchaseOrder.line_items.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse border border-gray-300">
@@ -429,8 +419,14 @@ const PurchaseOrderDetailPage: React.FC<PurchaseOrderDetailPageProps> = ({ purch
                   <tr className="bg-gray-50">
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Référence</th>
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Article</th>
-                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">Qté Commandée</th>
-                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900 print:hidden">Qté Reçue</th>
+                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">
+                      <span className="print:hidden">Quantité Commandée</span>
+                      <span className="hidden print:inline">Qte Cmd.</span>
+                    </th>
+                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">
+                      <span className="print:hidden">Quantité Reçue</span>
+                      <span className="hidden print:inline">Qte Reç.</span>
+                    </th>
                     <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900 hidden print:table-cell">Qté Reçue</th>
                   </tr>
                 </thead>
@@ -474,11 +470,6 @@ const PurchaseOrderDetailPage: React.FC<PurchaseOrderDetailPageProps> = ({ purch
           </div>
         )}
 
-        {/* Footer */}
-        <div className="mt-12 pt-6 border-t border-gray-200 text-center text-sm text-gray-600">
-          <p>Merci pour votre collaboration!</p>
-          <p className="mt-2">Gepronet - Gestion Professionnelle</p>
-        </div>
       </div>
     </div>
   );

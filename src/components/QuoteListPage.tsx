@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Search, ChevronLeft, ChevronRight, Plus, Eye, FileText } from 'lucide-react';
+import { RefreshCw, Search, ChevronLeft, ChevronRight, Plus, Eye, Edit, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Quote {

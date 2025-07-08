@@ -18,8 +18,6 @@ import PurchaseOrderPage from './components/PurchaseOrderPage';
 function App() {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [preFilledInvoiceData, setPreFilledInvoiceData] = useState<any>(null);
-  const [preFilledDeliveryNoteData, setPreFilledDeliveryNoteData] = useState<any>(null);
-  const [preFilledReturnNoteData, setPreFilledReturnNoteData] = useState<any>(null);
   const [preFilledQuoteData, setPreFilledQuoteData] = useState<any>(null);
 
   const handleGenerateInvoiceFromOrder = (orderData: any) => {
@@ -27,14 +25,9 @@ function App() {
     setActiveSection('factures');
   };
 
-  const handleGenerateDeliveryNoteFromInvoice = (deliveryNoteData: any) => {
-    setPreFilledDeliveryNoteData(deliveryNoteData);
-    setActiveSection('livraison');
-  };
-
-  const handleGenerateReturnNoteFromInvoice = (returnNoteData: any) => {
-    setPreFilledReturnNoteData(returnNoteData);
-    setActiveSection('retour');
+  const handleGenerateInvoiceFromDeliveryNotes = (invoiceData: any) => {
+    setPreFilledInvoiceData(invoiceData);
+    setActiveSection('factures');
   };
 
   const handleGenerateInvoiceFromQuote = (invoiceData: any) => {
@@ -52,19 +45,11 @@ function App() {
         return <InvoicePage 
           preFilledData={preFilledInvoiceData} 
           onClearPreFilled={() => setPreFilledInvoiceData(null)}
-          onGenerateDeliveryNote={handleGenerateDeliveryNoteFromInvoice}
-          onGenerateReturnNote={handleGenerateReturnNoteFromInvoice}
         />;
       case 'livraison':
-        return <DeliveryNotePage 
-          preFilledData={preFilledDeliveryNoteData} 
-          onClearPreFilled={() => setPreFilledDeliveryNoteData(null)} 
-        />;
+        return <DeliveryNotePage onGenerateInvoice={handleGenerateInvoiceFromDeliveryNotes} />;
       case 'retour':
-        return <ReturnNotePage 
-          preFilledData={preFilledReturnNoteData} 
-          onClearPreFilled={() => setPreFilledReturnNoteData(null)} 
-        />;
+        return <ReturnNotePage />;
       case 'devis':
         return <QuotePage 
           preFilledData={preFilledQuoteData} 

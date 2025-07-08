@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Printer, Save } from 'lucide-react';
+import { ArrowLeft, Printer, Calendar, FileText, Edit, Save } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface QuoteLineItem {
@@ -36,9 +36,10 @@ interface QuoteDetail {
 interface QuoteDetailPageProps {
   quoteId: string;
   onBack: () => void;
+  onEditQuote?: (quoteId: string) => void;
 }
 
-const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId, onBack }) => {
+const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId, onBack, onEditQuote }) => {
   const [quote, setQuote] = useState<QuoteDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -232,6 +233,15 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId, onBack }) =>
           <span>Retour aux devis</span>
         </button>
         <div className="flex space-x-3">
+          {onEditQuote && (
+            <button
+              onClick={() => onEditQuote(quoteId)}
+              className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
+            >
+              <Edit className="w-4 h-4" />
+              <span>Modifier</span>
+            </button>
+          )}
           <button
             onClick={handlePrint}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
@@ -245,14 +255,20 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId, onBack }) =>
       {/* Quote Layout */}
       <div className="bg-white shadow-sm border border-gray-200 rounded-lg p-8 print:shadow-none print:border-none">
         {/* Quote Header */}
-        <div className="border-b border-gray-200 pb-6 mb-6">
+        <div className="pb-3 mb-3">
           <div className="flex justify-between items-start">
             <div>
-              <img 
-                src="https://pub-237d2da54b564d23aaa1c3826e1d4e65.r2.dev/gepronet/gepronet.png" 
-                alt="Gepronet Logo" 
-                className="w-48 h-auto mb-4"
-              />
+              <div className="w-64 text-center text-sm leading-tight mb-4">
+                <div className="font-bold text-lg text-gray-900">GETRADIS</div>
+                <div className="font-semibold text-gray-800">Magasin Gepronet</div>
+                <div className="text-gray-700 mt-1">111, Avenue Mohamed Belhassan</div>
+                <div className="text-gray-700">Elouazani - RABAT</div>
+                <div className="text-gray-700 mt-1">Patente : 25903587 - R. C. : 29149</div>
+                <div className="text-gray-700">I. F. : 03315202</div>
+                <div className="text-gray-700 mt-1">Tél : 0537654006</div>
+                <div className="text-gray-700">Fax: 0537756864</div>
+                <div className="text-gray-700">e-mail : contact@gepronet.com</div>
+              </div>
             </div>
             <div className="text-right">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">DEVIS</h1>
@@ -308,36 +324,20 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId, onBack }) =>
         </div>
 
         {/* Customer Information */}
-        <div className="mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Devis pour:</h3>
-              <div className="text-gray-700">
-                <p className="font-semibold">{quote.customer_name}</p>
-                {quote.customer_email && <p>{quote.customer_email}</p>}
-                {quote.customer_phone && <p>{quote.customer_phone}</p>}
-                {quote.customer_address && (
-                  <p className="mt-2 whitespace-pre-line">{quote.customer_address}</p>
-                )}
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Détails du devis:</h3>
-              <div className="text-gray-700 space-y-1">
-                <p><span className="font-medium">Numéro:</span> {quote.quote_number}</p>
-                <p><span className="font-medium">Date d'émission:</span> {formatDate(quote.quote_date)}</p>
-                {quote.valid_until_date && (
-                  <p><span className="font-medium">Valable jusqu'au:</span> {formatDate(quote.valid_until_date)}</p>
-                )}
-                <p><span className="font-medium">Statut:</span> <span className="capitalize">{getStatusText(quote.status)}</span></p>
-              </div>
+        <div className="mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Client:</h3>
+            <div className="text-gray-700">
+              <p className="font-semibold">{quote.customer_name}</p>
+              {quote.customer_address && (
+                <p className="mt-1 whitespace-pre-line">{quote.customer_address}</p>
+              )}
             </div>
           </div>
         </div>
 
         {/* Line Items Table */}
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Articles</h3>
+        <div className="mb-6">
           {quote.line_items && quote.line_items.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse border border-gray-300">
@@ -345,7 +345,10 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId, onBack }) =>
                   <tr className="bg-gray-50">
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Référence</th>
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Article</th>
-                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">Quantité</th>
+                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">
+                      <span className="print:hidden">Quantité</span>
+                      <span className="hidden print:inline">Qte</span>
+                    </th>
                     <th className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">Prix Unit. HT</th>
                     <th className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">Total HT</th>
                     <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">TVA %</th>
@@ -385,20 +388,20 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId, onBack }) =>
         {/* Totals */}
         <div className="flex justify-end">
           <div className="w-80">
-            <div className="border-t border-gray-300 pt-4">
-              <div className="flex justify-between items-center py-2">
+            <div className="border-t border-gray-300 pt-2">
+              <div className="flex justify-between items-center">
                 <span className="text-gray-700">Sous-total HT:</span>
                 <span className="font-medium text-gray-900">
                   {quote.subtotal_ht.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
                 </span>
               </div>
-              <div className="flex justify-between items-center py-2">
+              <div className="flex justify-between items-center">
                 <span className="text-gray-700">TVA:</span>
                 <span className="font-medium text-gray-900">
                   {quote.total_vat.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
                 </span>
               </div>
-              <div className="border-t border-gray-300 pt-2 mt-2">
+              <div className="border-t border-gray-300 pt-1">
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-semibold text-gray-900">TOTAL TTC:</span>
                   <span className="text-xl font-bold text-[#21522f]">
@@ -426,12 +429,6 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId, onBack }) =>
             <p>• Les prix sont exprimés en dirhams (DH) toutes taxes comprises</p>
             <p>• Paiement à 30 jours net</p>
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-12 pt-6 border-t border-gray-200 text-center text-sm text-gray-600">
-          <p>Merci pour votre confiance!</p>
-          <p className="mt-2">Gepronet - Gestion Professionnelle</p>
         </div>
       </div>
     </div>

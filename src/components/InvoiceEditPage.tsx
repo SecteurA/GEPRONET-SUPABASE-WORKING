@@ -3,28 +3,33 @@ import { ArrowLeft, Save, Package, Plus, Search, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ClientSelector from './ClientSelector';
 
-interface ReturnNoteLineItem {
+interface InvoiceLineItem {
   id: string;
   product_id: string;
   product_sku: string;
   product_name: string;
-  quantity_returned: number;
+  quantity: number;
   unit_price_ht: number;
   total_ht: number;
   vat_percentage: number;
   vat_amount: number;
 }
 
-interface ReturnNote {
-  invoice_id: string;
+interface Invoice {
+  id: string;
+  invoice_number: string;
   customer_name: string;
   customer_email: string;
   customer_phone: string;
   customer_address: string;
-  return_date: string;
-  reason: string;
+  invoice_date: string;
+  due_date: string;
+  status: string;
   notes: string;
-  line_items: ReturnNoteLineItem[];
+  subtotal_ht: number;
+  total_vat: number;
+  total_ttc: number;
+  line_items: InvoiceLineItem[];
 }
 
 interface Product {
@@ -41,25 +46,14 @@ interface Product {
   }>;
 }
 
-interface ReturnNoteFormPageProps {
+interface InvoiceEditPageProps {
+  invoiceId: string;
   onBack: () => void;
-  preFilledData?: any;
-  onClearPreFilled?: () => void;
 }
 
-const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFilledData, onClearPreFilled }) => {
-  const [returnNote, setReturnNote] = useState<ReturnNote>({
-    invoice_id: '',
-    customer_name: '',
-    customer_email: '',
-    customer_phone: '',
-    customer_address: '',
-    return_date: new Date().toISOString().split('T')[0],
-    reason: '',
-    notes: '',
-    line_items: [],
-  });
-
+const InvoiceEditPage: React.FC<InvoiceEditPageProps> = ({ invoiceId, onBack }) => {
+  const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
@@ -70,59 +64,93 @@ const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFill
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchTouched, setSearchTouched] = useState(false);
 
-  // Initialize with pre-filled data if provided
   useEffect(() => {
-    if (preFilledData) {
-      setReturnNote(preFilledData);
-      
-      // Create a mock client object from the pre-filled data if customer info exists
-      if (preFilledData.customer_name) {
-        const nameParts = preFilledData.customer_name.split(' ');
+    fetchInvoiceDetail();
+  }, [invoiceId]);
+
+  const fetchInvoiceDetail = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      // Get invoice details
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('id', invoiceId)
+        .single();
+
+      if (invoiceError) {
+        setError('Facture non trouvée');
+        return;
+      }
+
+      // Check if invoice can be edited
+      if (invoiceData.status !== 'draft') {
+        setError('Seules les factures en brouillon peuvent être modifiées');
+        return;
+      }
+
+      // Get line items for the invoice
+      const { data: lineItems, error: lineItemsError } = await supabase
+        .from('invoice_line_items')
+        .select('*')
+        .eq('invoice_id', invoiceId)
+        .order('created_at', { ascending: true });
+
+      if (lineItemsError) {
+        console.error('Error fetching line items:', lineItemsError);
+      }
+
+      const invoiceWithItems = {
+        ...invoiceData,
+        line_items: lineItems || []
+      };
+
+      setInvoice(invoiceWithItems);
+
+      // Create client object from invoice data
+      if (invoiceData.customer_name) {
+        const nameParts = invoiceData.customer_name.split(' ');
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
         
         const mockClient = {
-          id: 'prefilled-client',
+          id: 'existing-client',
           first_name: firstName,
           last_name: lastName,
-          email: preFilledData.customer_email || '',
-          phone: preFilledData.customer_phone || '',
+          email: invoiceData.customer_email || '',
+          phone: invoiceData.customer_phone || '',
           company_name: '',
           ice: '',
-          address_line1: preFilledData.customer_address || '',
+          address_line1: invoiceData.customer_address || '',
           created_at: '',
           updated_at: '',
         };
         setSelectedClient(mockClient);
       }
+    } catch (err) {
+      setError('Erreur lors du chargement de la facture');
+    } finally {
+      setLoading(false);
     }
-  }, [preFilledData]);
+  };
 
   // Handle client selection from ClientSelector
   const handleClientSelect = (client: any) => {
     setSelectedClient(client);
-    if (client) {
-      // Auto-fill return note fields with client data
-      setReturnNote(prev => ({
+    if (client && invoice) {
+      setInvoice(prev => prev ? {
         ...prev,
         customer_name: `${client.first_name} ${client.last_name}`.trim(),
         customer_email: client.email || '',
         customer_phone: client.phone || '',
         customer_address: client.address_line1 || '',
-      }));
-    } else {
-      // Clear return note fields when no client is selected
-      setReturnNote(prev => ({
-        ...prev,
-        customer_name: '',
-        customer_email: '',
-        customer_phone: '',
-        customer_address: '',
-      }));
+      } : null);
     }
   };
 
-  // Debounced search function
+  // Debounced search function for products
   const fetchProducts = async (searchTerm: string) => {
     if (searchTerm.length < 2) {
       setProducts([]);
@@ -167,44 +195,9 @@ const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFill
     return () => clearTimeout(timeoutId);
   }, [productSearch, searchTouched]);
 
-  const addProductToReturnNote = (product: Product) => {
-    const priceFromWC = parseFloat(product.regular_price || product.price || '0');
-    const vatPercentage = getVATPercentage(product.tax_class, product.tax_rates);
-    
-    // For return notes, we typically use the original selling price
-    // Calculate HT price from TTC price (assuming WooCommerce prices include VAT)
-    const unitPriceHT = vatPercentage > 0 ? priceFromWC / (1 + vatPercentage / 100) : priceFromWC;
-    const totalHT = unitPriceHT * 1;
-    const vatAmount = totalHT * (vatPercentage / 100);
-
-    const newLineItem: ReturnNoteLineItem = {
-      id: `${product.id}-${Date.now()}`,
-      product_id: product.id.toString(),
-      product_sku: product.sku || '',
-      product_name: product.name,
-      quantity_returned: 1,
-      unit_price_ht: unitPriceHT,
-      total_ht: totalHT,
-      vat_percentage: vatPercentage,
-      vat_amount: vatAmount,
-    };
-
-    setReturnNote(prev => ({
-      ...prev,
-      line_items: [...prev.line_items, newLineItem],
-    }));
-
-    setShowProductModal(false);
-    // Clear search state for next time
-    setProductSearch('');
-    setProducts([]);
-    setSearchTouched(false);
-  };
-
   const getVATPercentage = (taxClass: string, taxRates?: any[]): number => {
     // If we have tax rates data from WooCommerce, use it
     if (taxRates && taxRates.length > 0) {
-      // Find tax rate for this class
       const matchingRate = taxRates.find(rate => 
         rate.class === taxClass || 
         (taxClass === '' && rate.class === 'standard') ||
@@ -221,17 +214,50 @@ const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFill
       return 0;
     }
     
-    // Check for reduced rate indicators
     if (taxClass.toLowerCase().includes('reduced') || taxClass.toLowerCase().includes('reduit')) {
-      return 10; // Reduced VAT rate in Morocco
+      return 10;
     }
     
-    // Default standard VAT rate for Morocco
     return 20;
   };
 
+  const addProductToInvoice = (product: Product) => {
+    if (!invoice) return;
+
+    const priceFromWC = parseFloat(product.regular_price || product.price || '0');
+    const vatPercentage = getVATPercentage(product.tax_class, product.tax_rates);
+    
+    const unitPriceHT = vatPercentage > 0 ? priceFromWC / (1 + vatPercentage / 100) : priceFromWC;
+    const totalHT = unitPriceHT * 1;
+    const vatAmount = totalHT * (vatPercentage / 100);
+
+    const newLineItem: InvoiceLineItem = {
+      id: `new-${product.id}-${Date.now()}`,
+      product_id: product.id.toString(),
+      product_sku: product.sku || '',
+      product_name: product.name,
+      quantity: 1,
+      unit_price_ht: unitPriceHT,
+      total_ht: totalHT,
+      vat_percentage: vatPercentage,
+      vat_amount: vatAmount,
+    };
+
+    setInvoice(prev => prev ? {
+      ...prev,
+      line_items: [...prev.line_items, newLineItem],
+    } : null);
+
+    setShowProductModal(false);
+    setProductSearch('');
+    setProducts([]);
+    setSearchTouched(false);
+  };
+
   const updateLineItemQuantity = (itemId: string, quantity: number) => {
-    setReturnNote(prev => ({
+    if (!invoice) return;
+
+    setInvoice(prev => prev ? {
       ...prev,
       line_items: prev.line_items.map(item => {
         if (item.id === itemId) {
@@ -239,22 +265,24 @@ const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFill
           const vatAmount = totalHT * (item.vat_percentage / 100);
           return {
             ...item,
-            quantity_returned: quantity,
+            quantity,
             total_ht: totalHT,
             vat_amount: vatAmount,
           };
         }
         return item;
       }),
-    }));
+    } : null);
   };
 
   const updateLineItemPrice = (itemId: string, unitPriceHT: number) => {
-    setReturnNote(prev => ({
+    if (!invoice) return;
+
+    setInvoice(prev => prev ? {
       ...prev,
       line_items: prev.line_items.map(item => {
         if (item.id === itemId) {
-          const totalHT = unitPriceHT * item.quantity_returned;
+          const totalHT = unitPriceHT * item.quantity;
           const vatAmount = totalHT * (item.vat_percentage / 100);
           return {
             ...item,
@@ -265,11 +293,13 @@ const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFill
         }
         return item;
       }),
-    }));
+    } : null);
   };
 
   const updateLineItemVAT = (itemId: string, vatPercentage: number) => {
-    setReturnNote(prev => ({
+    if (!invoice) return;
+
+    setInvoice(prev => prev ? {
       ...prev,
       line_items: prev.line_items.map(item => {
         if (item.id === itemId) {
@@ -282,31 +312,30 @@ const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFill
         }
         return item;
       }),
-    }));
+    } : null);
   };
 
   const removeLineItem = (itemId: string) => {
-    setReturnNote(prev => ({
+    if (!invoice) return;
+
+    setInvoice(prev => prev ? {
       ...prev,
       line_items: prev.line_items.filter(item => item.id !== itemId),
-    }));
+    } : null);
   };
 
   const calculateTotals = () => {
-    const subtotalHT = returnNote.line_items.reduce((sum, item) => sum + item.total_ht, 0);
-    const totalVAT = returnNote.line_items.reduce((sum, item) => sum + item.vat_amount, 0);
+    if (!invoice) return { subtotalHT: 0, totalVAT: 0, totalTTC: 0 };
+
+    const subtotalHT = invoice.line_items.reduce((sum, item) => sum + item.total_ht, 0);
+    const totalVAT = invoice.line_items.reduce((sum, item) => sum + item.vat_amount, 0);
     const totalTTC = subtotalHT + totalVAT;
 
-    return {
-      subtotalHT,
-      totalVAT,
-      totalTTC,
-    };
+    return { subtotalHT, totalVAT, totalTTC };
   };
 
   const handleOpenProductModal = () => {
     setShowProductModal(true);
-    // Reset search state when opening modal
     setProductSearch('');
     setProducts([]);
     setSearchTouched(false);
@@ -315,7 +344,6 @@ const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFill
 
   const handleCloseProductModal = () => {
     setShowProductModal(false);
-    // Clear search state when closing modal
     setProductSearch('');
     setProducts([]);
     setSearchTouched(false);
@@ -326,76 +354,130 @@ const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFill
     setSearchTouched(true);
   };
 
-  const { subtotalHT, totalVAT, totalTTC } = calculateTotals();
+  const saveInvoice = async () => {
+    if (!invoice) return;
 
-  const saveReturnNote = async () => {
     try {
       setSaving(true);
       setError('');
       setSuccess('');
 
       // Validate required fields
-      if (!returnNote.customer_name.trim()) {
+      if (!invoice.customer_name.trim()) {
         setError('Le nom du client est requis');
         return;
       }
 
-      if (returnNote.line_items.length === 0) {
+      if (invoice.line_items.length === 0) {
         setError('Au moins un article est requis');
         return;
       }
 
-      // For return notes, we need to simulate an invoice_id since it's required
-      // In a real system, you might want to link this to an actual invoice
-      const simulatedInvoiceId = '00000000-0000-0000-0000-000000000000';
+      const { subtotalHT, totalVAT, totalTTC } = calculateTotals();
 
-      const returnNoteData = {
-        ...returnNote,
-        invoice_id: returnNote.invoice_id || simulatedInvoiceId,
-      };
+      // Update invoice
+      const { error: updateError } = await supabase
+        .from('invoices')
+        .update({
+          customer_name: invoice.customer_name,
+          customer_email: invoice.customer_email,
+          customer_phone: invoice.customer_phone,
+          customer_address: invoice.customer_address,
+          invoice_date: invoice.invoice_date,
+          due_date: invoice.due_date || null,
+          notes: invoice.notes,
+          subtotal_ht: subtotalHT,
+          total_vat: totalVAT,
+          total_ttc: totalTTC,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', invoiceId);
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-return-note`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(returnNoteData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        setError(result.error || 'Erreur lors de la sauvegarde du bon de retour');
+      if (updateError) {
+        setError('Erreur lors de la mise à jour de la facture');
         return;
       }
 
-      setSuccess(`Bon de retour ${result.return_note.return_note_number} créé avec succès`);
+      // Delete existing line items
+      const { error: deleteError } = await supabase
+        .from('invoice_line_items')
+        .delete()
+        .eq('invoice_id', invoiceId);
+
+      if (deleteError) {
+        setError('Erreur lors de la mise à jour des articles');
+        return;
+      }
+
+      // Insert updated line items
+      const lineItemsData = invoice.line_items.map(item => ({
+        invoice_id: invoiceId,
+        product_id: item.product_id,
+        product_sku: item.product_sku,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_price_ht: item.unit_price_ht,
+        total_ht: item.total_ht,
+        vat_percentage: item.vat_percentage,
+        vat_amount: item.vat_amount,
+      }));
+
+      const { error: insertError } = await supabase
+        .from('invoice_line_items')
+        .insert(lineItemsData);
+
+      if (insertError) {
+        setError('Erreur lors de la mise à jour des articles');
+        return;
+      }
+
+      setSuccess('Facture mise à jour avec succès');
       
-      // Reset form after successful save
+      // Go back to detail view after successful save
       setTimeout(() => {
-        setReturnNote({
-          invoice_id: '',
-          customer_name: '',
-          customer_email: '',
-          customer_phone: '',
-          customer_address: '',
-          return_date: new Date().toISOString().split('T')[0],
-          reason: '',
-          notes: '',
-          line_items: [],
-        });
-        setSelectedClient(null);
-        setSuccess('');
-        onBack(); // Go back to return note list
-      }, 2000);
+        onBack();
+      }, 1500);
 
     } catch (err) {
-      setError('Erreur lors de la sauvegarde du bon de retour');
+      setError('Erreur lors de la sauvegarde de la facture');
     } finally {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-[#21522f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Chargement de la facture...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !invoice) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={onBack}
+            className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-[#21522f] transition-colors duration-200"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Retour</span>
+          </button>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+          <p className="text-red-700">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!invoice) return null;
+
+  const { subtotalHT, totalVAT, totalTTC } = calculateTotals();
 
   return (
     <div className="space-y-6">
@@ -410,14 +492,14 @@ const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFill
             <span>Retour</span>
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Nouveau Bon de Retour</h1>
-            <p className="text-gray-600">Créer un nouveau bon de retour</p>
+            <h1 className="text-2xl font-bold text-gray-900">Modifier Facture</h1>
+            <p className="text-gray-600">{invoice.invoice_number}</p>
           </div>
         </div>
         <div className="flex space-x-3">
           <button
-            onClick={saveReturnNote}
-            disabled={saving || returnNote.line_items.length === 0 || !returnNote.customer_name.trim()}
+            onClick={saveInvoice}
+            disabled={saving || invoice.line_items.length === 0 || !invoice.customer_name.trim()}
             className="flex items-center space-x-2 px-4 py-2 bg-[#21522f] text-white rounded-lg hover:bg-[#1a4025] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
           >
             <Save className="w-4 h-4" />
@@ -445,37 +527,31 @@ const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFill
         title="Informations Client"
       />
 
-      {/* Additional Return Note Fields */}
+      {/* Additional Invoice Fields */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Détails du retour</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Détails de la facture</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Date de retour
+              Date de la facture
             </label>
             <input
               type="date"
-              value={returnNote.return_date}
-              onChange={(e) => setReturnNote(prev => ({ ...prev, return_date: e.target.value }))}
+              value={invoice.invoice_date}
+              onChange={(e) => setInvoice(prev => prev ? { ...prev, invoice_date: e.target.value } : null)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Motif du retour
+              Date d'échéance
             </label>
-            <select
-              value={returnNote.reason}
-              onChange={(e) => setReturnNote(prev => ({ ...prev, reason: e.target.value }))}
+            <input
+              type="date"
+              value={invoice.due_date || ''}
+              onChange={(e) => setInvoice(prev => prev ? { ...prev, due_date: e.target.value } : null)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
-            >
-              <option value="">Sélectionner un motif</option>
-              <option value="defect">Produit défectueux</option>
-              <option value="wrong_item">Mauvais article</option>
-              <option value="not_satisfied">Client non satisfait</option>
-              <option value="damaged">Produit endommagé</option>
-              <option value="other">Autre</option>
-            </select>
+            />
           </div>
         </div>
       </div>
@@ -495,9 +571,9 @@ const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFill
       {/* Line Items */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Articles à retourner</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Articles</h2>
           
-          {returnNote.line_items.length > 0 ? (
+          {invoice.line_items.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse border border-gray-300">
                 <thead>
@@ -505,25 +581,25 @@ const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFill
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Référence</th>
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Article</th>
                     <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                      <span className="print:hidden">Quantité Retournée</span>
-                      <span className="hidden print:inline">Qte Ret.</span>
+                      <span className="print:hidden">Quantité</span>
+                      <span className="hidden print:inline">Qte</span>
                     </th>
                     <th className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">Prix Unit. HT</th>
                     <th className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">Total HT</th>
                     <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">TVA %</th>
                     <th className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">TVA</th>
-                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900 print:hidden">Actions</th>
+                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {returnNote.line_items.map((item) => (
+                  {invoice.line_items.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50">
                       <td className="border border-gray-300 px-4 py-3 text-sm text-gray-600">{item.product_sku || '-'}</td>
                       <td className="border border-gray-300 px-4 py-3 text-sm text-gray-900">{item.product_name}</td>
                       <td className="border border-gray-300 px-4 py-3 text-center">
                         <input
                           type="number"
-                          value={item.quantity_returned}
+                          value={item.quantity}
                           onChange={(e) => updateLineItemQuantity(item.id, parseInt(e.target.value) || 1)}
                           min="1"
                           className="w-20 px-2 py-1 border border-gray-300 rounded text-center focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
@@ -556,7 +632,7 @@ const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFill
                       <td className="border border-gray-300 px-4 py-3 text-right text-sm text-gray-900">
                         {item.vat_amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
                       </td>
-                      <td className="border border-gray-300 px-4 py-3 text-center print:hidden">
+                      <td className="border border-gray-300 px-4 py-3 text-center">
                         <button
                           onClick={() => removeLineItem(item.id)}
                           className="text-red-600 hover:text-red-900 transition-colors duration-200"
@@ -572,13 +648,13 @@ const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFill
           ) : (
             <div className="text-center py-8 text-gray-500">
               <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p>Aucun article ajouté au bon de retour</p>
+              <p>Aucun article ajouté à la facture</p>
               <p className="text-sm">Cliquez sur "Ajouter Produit" pour commencer</p>
             </div>
           )}
         </div>
 
-        {returnNote.line_items.length > 0 && (
+        {invoice.line_items.length > 0 && (
           <div className="bg-gray-50 p-6 border-t border-gray-200">
             <div className="flex justify-end">
               <div className="w-80">
@@ -614,10 +690,10 @@ const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFill
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Notes</h2>
         <textarea
-          value={returnNote.notes}
-          onChange={(e) => setReturnNote(prev => ({ ...prev, notes: e.target.value }))}
+          value={invoice.notes}
+          onChange={(e) => setInvoice(prev => prev ? { ...prev, notes: e.target.value } : null)}
           rows={3}
-          placeholder="Notes additionnelles pour le bon de retour..."
+          placeholder="Notes additionnelles pour la facture..."
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
         />
       </div>
@@ -671,7 +747,7 @@ const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFill
                     <div
                       key={product.id}
                       className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-200"
-                      onClick={() => addProductToReturnNote(product)}
+                      onClick={() => addProductToInvoice(product)}
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
@@ -720,4 +796,4 @@ const ReturnNoteFormPage: React.FC<ReturnNoteFormPageProps> = ({ onBack, preFill
   );
 };
 
-export default ReturnNoteFormPage;
+export default InvoiceEditPage;

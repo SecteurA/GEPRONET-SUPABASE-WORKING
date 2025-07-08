@@ -91,6 +91,11 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
           updated_at: '',
         };
         setSelectedClient(mockClient);
+        
+        // Show special message for delivery note source
+        if (preFilledData.delivery_note_numbers) {
+          setSuccess(`Facture pré-remplie à partir des bons de livraison: ${preFilledData.delivery_note_numbers.join(', ')}`);
+        }
       }
     }
   }, [preFilledData]);
@@ -403,6 +408,41 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
         title="Informations Client"
       />
 
+      {/* Pre-filled client info display */}
+      {preFilledData && selectedClient && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Informations Client</h2>
+          <div className={`border rounded-lg p-4 ${preFilledData.delivery_note_numbers ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'}`}>
+            {preFilledData.delivery_note_numbers && (
+              <div className="mb-4 pb-4 border-b border-green-300">
+                <p className="text-sm font-medium text-green-800 mb-2">Bons de livraison source:</p>
+                <p className="text-green-700 text-sm">
+                  {preFilledData.delivery_note_numbers.join(', ')}
+                </p>
+              </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+                <p className="text-gray-900">{selectedClient.first_name} {selectedClient.last_name}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <p className="text-gray-900">{selectedClient.email || 'Non renseigné'}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+                <p className="text-gray-900">{selectedClient.phone || 'Non renseigné'}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+                <p className="text-gray-900">{selectedClient.address_line1 || 'Non renseignée'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Additional Invoice Fields */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Détails de la facture</h2>
@@ -445,12 +485,15 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
                   <tr className="bg-gray-50">
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Référence</th>
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Article</th>
-                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">Quantité</th>
+                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">
+                      <span className="print:hidden">Quantité</span>
+                      <span className="hidden print:inline">Qte</span>
+                    </th>
                     <th className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">Prix Unit. HT</th>
                     <th className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">Total HT</th>
                     <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">TVA %</th>
                     <th className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">TVA</th>
-                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">Actions</th>
+                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900 print:hidden">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -479,7 +522,7 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
                       <td className="border border-gray-300 px-4 py-3 text-right text-sm text-gray-900">
                         {item.vat_amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
                       </td>
-                      <td className="border border-gray-300 px-4 py-3 text-center">
+                      <td className="border border-gray-300 px-4 py-3 text-center print:hidden">
                         <button
                           onClick={() => removeLineItem(item.id)}
                           className="text-red-600 hover:text-red-900 transition-colors duration-200"

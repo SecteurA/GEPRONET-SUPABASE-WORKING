@@ -30,6 +30,34 @@
     padding-top: 0 !important;
   }
   
+  /* Remove all container spacing */
+  .space-y-6,
+  .space-y-4,
+  .space-y-2 {
+    display: block !important;
+  }
+  
+  .space-y-6 > *,
+  .space-y-4 > *,
+  .space-y-2 > * {
+    margin: 0 !important;
+  }
+  
+  /* Remove padding from main containers */
+  .bg-white {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  /* Specific delivery note container */
+  .bg-white.shadow-sm.border.border-gray-200.rounded-lg {
+    padding: 12pt !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  
   /* Reset body and html for print */
   html, body {
     margin: 0 !important;
@@ -41,7 +69,7 @@
   
   /* Configure page settings to minimize browser headers/footers */
   @page {
-    margin: 30px;
+    margin: 15px;
     size: A4;
   }
   
@@ -87,6 +115,74 @@
     font-size: 11pt !important;
   }
   
+  /* Delivery note table column width optimization for print */
+  table.w-full.border-collapse th:nth-child(1),
+  table.w-full.border-collapse td:nth-child(1) {
+    width: 8% !important; /* Référence - narrower */
+  }
+  
+  table.w-full.border-collapse th:nth-child(2),
+  table.w-full.border-collapse td:nth-child(2) {
+    width: 45% !important; /* DÉSIGNATION - Much more space */
+  }
+  
+  table.w-full.border-collapse th:nth-child(3),
+  table.w-full.border-collapse td:nth-child(3) {
+    width: 6% !important; /* QTÉ - narrower */
+  }
+  
+  table.w-full.border-collapse th:nth-child(4),
+  table.w-full.border-collapse td:nth-child(4) {
+    width: 12% !important; /* P.U. H.T - narrower */
+  }
+  
+  table.w-full.border-collapse th:nth-child(5),
+  table.w-full.border-collapse td:nth-child(5) {
+    width: 12% !important; /* NET H.T - narrower */
+  }
+  
+  table.w-full.border-collapse th:nth-child(6),
+  table.w-full.border-collapse td:nth-child(6) {
+    width: 6% !important; /* T.V.A % - narrower */
+  }
+  
+  table.w-full.border-collapse th:nth-child(7),
+  table.w-full.border-collapse td:nth-child(7) {
+    width: 11% !important; /* MONTANT T.V.A - narrower */
+  }
+  
+  /* Change "Quantité" to "Qte" in print */
+  /* Show/hide text based on print */
+  @media print {
+    .print\\:hidden {
+      display: none !important;
+    }
+    
+    .hidden.print\\:inline {
+      display: inline !important;
+    }
+  }
+  
+  /* Default state - hide print-only content */
+  .hidden.print\\:inline {
+    display: none !important;
+  }
+  
+  
+  /* Ensure table headers are compact for print */
+  table.w-full.border-collapse th {
+    padding: 2pt 1pt !important; /* Much smaller padding */
+    font-size: 8pt !important; /* Smaller font */
+    line-height: 1.1 !important;
+  }
+  
+  /* Ensure table cells are compact for print */
+  table.w-full.border-collapse td {
+    padding: 1pt !important; /* Much smaller padding */
+    font-size: 8pt !important; /* Smaller font */
+    line-height: 1.2 !important;
+  }
+  
   /* Table borders */
   table,
   table th,
@@ -108,9 +204,10 @@
     background: #f5f5f5 !important;
     color: #000 !important;
     font-weight: bold !important;
-    padding: 8px !important;
+    padding: 2pt 1pt !important; /* Compact padding */
     text-align: left !important;
     border: 1px solid #000 !important;
+    font-size: 8pt !important; /* Smaller font */
   }
   
   /* Table body */
@@ -120,10 +217,12 @@
   }
   
   table tbody td {
-    padding: 8px !important;
+    padding: 1pt !important; /* Very compact padding */
     color: #000 !important;
     border: 1px solid #000 !important;
     background: white !important;
+    font-size: 8pt !important; /* Smaller font */
+    line-height: 1.1 !important; /* Tighter line height */
   }
   
   /* Specific table cell alignments */
@@ -177,11 +276,36 @@
     background: white !important;
   }
   
-  /* Override spacing issues */
-  .space-y-6 > * + *,
-  .space-y-4 > * + *,
-  .space-y-2 > * + * {
-    margin-top: 0 !important;
+  /* Company information block styling for print */
+  .w-64.text-center {
+    width: 256px !important;
+    text-align: center !important;
+    margin-bottom: 6pt !important; /* Reduce space */
+  }
+  
+  .w-64.text-center .font-bold.text-lg {
+    font-size: 12pt !important; /* Smaller */
+    font-weight: bold !important;
+    color: #000 !important;
+    margin-bottom: 2pt !important; /* Less space */
+  }
+  
+  .w-64.text-center .font-semibold {
+    font-size: 10pt !important; /* Smaller */
+    font-weight: 600 !important;
+    color: #000 !important;
+    margin-bottom: 1pt !important; /* Less space */
+  }
+  
+  .w-64.text-center .text-gray-700 {
+    font-size: 8pt !important; /* Smaller */
+    color: #000 !important;
+    line-height: 1.2 !important;
+    margin-bottom: 0.5pt !important; /* Less space */
+  }
+  
+  .w-64.text-center .mt-1 {
+    margin-top: 1pt !important; /* Less space */
   }
   
   /* Preserve some colors for branding */
@@ -262,39 +386,59 @@
   }</Action>
   
   /* Ensure proper margin and padding for print layout */
-  .p-6,
+  .p-6 {
+    padding: 2pt !important; /* Much smaller */
+  }
+  
   .p-8 {
-    padding: 12pt !important;
+    padding: 2pt !important; /* Much smaller */
   }
   
   .p-4 {
-    padding: 8pt !important;
+    padding: 1pt !important; /* Much smaller */
   }
   
   .p-3 {
-    padding: 6pt !important;
+    padding: 1pt !important; /* Much smaller */
   }
   
   .px-4 {
-    padding-left: 8pt !important;
-    padding-right: 8pt !important;
+    padding-left: 1pt !important; /* Much smaller */
+    padding-right: 1pt !important;
   }
   
   .py-3 {
-    padding-top: 6pt !important;
-    padding-bottom: 6pt !important;
+    padding-top: 1pt !important; /* Much smaller */
+    padding-bottom: 1pt !important;
   }
   
   .mb-4 {
-    margin-bottom: 8pt !important;
+    margin-bottom: 2pt !important; /* Much smaller */
   }
   
   .mb-6 {
-    margin-bottom: 12pt !important;
+    margin-bottom: 3pt !important; /* Much smaller */
   }
   
   .mb-8 {
-    margin-bottom: 16pt !important;
+    margin-bottom: 4pt !important; /* Much smaller */
+  }
+  
+  .mb-3 {
+    margin-bottom: 1pt !important; /* Much smaller */
+  }
+  
+  .pb-3 {
+    padding-bottom: 1pt !important; /* Much smaller */
+  }
+  
+  /* Remove all margins from first and last children */
+  *:first-child {
+    margin-top: 0 !important;
+  }
+  
+  *:last-child {
+    margin-bottom: 0 !important;
   }
   
   /* Ensure grid layouts work in print */
@@ -311,6 +455,6 @@
   .grid > div {
     display: table-cell !important;
     vertical-align: top !important;
-    padding: 6pt !important;
+    padding: 2pt !important; /* Much smaller */
   }
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Printer, Save } from 'lucide-react';
+import { ArrowLeft, Printer, Save, ChevronDown, Check, Edit } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface InvoiceLineItem {
@@ -46,6 +46,7 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
   const [newStatus, setNewStatus] = useState('');
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState('');
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
   useEffect(() => {
     fetchInvoiceDetail();
@@ -121,21 +122,24 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'paid':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 border-green-200';
       case 'sent':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'overdue':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 border-red-200';
       case 'draft':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
-  const handleStatusSave = async () => {
-    if (!invoice || newStatus === invoice.status) {
+  const handleStatusSave = async (selectedStatus?: string) => {
+    const statusToUpdate = selectedStatus || newStatus;
+    
+    if (!invoice || statusToUpdate === invoice.status) {
       setEditingStatus(false);
+      setShowStatusDropdown(false);
       return;
     }
 
@@ -147,7 +151,7 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
       const { error: updateError } = await supabase
         .from('invoices')
         .update({ 
-          status: newStatus,
+          status: statusToUpdate,
           updated_at: new Date().toISOString(),
         })
         .eq('id', invoiceId);
@@ -157,7 +161,7 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
         return;
       }
 
-      setInvoice(prev => prev ? { ...prev, status: newStatus } : null);
+      setInvoice(prev => prev ? { ...prev, status: statusToUpdate } : null);
       setEditingStatus(false);
       setSuccess('Statut mis à jour avec succès');
       
@@ -168,12 +172,14 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
       setError('Erreur lors de la mise à jour du statut');
     } finally {
       setSaving(false);
+      setShowStatusDropdown(false);
     }
   };
 
   const handleStatusCancel = () => {
     setNewStatus(invoice?.status || '');
     setEditingStatus(false);
+    setShowStatusDropdown(false);
   };
 
   if (loading) {
@@ -230,6 +236,62 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
           <span>Retour aux factures</span>
         </button>
         <div className="flex space-x-3">
+          {/* Edit Button - only show for draft invoices */}
+          {invoice.status === 'draft' && (
+            <button
+              onClick={() => window.location.href = `#edit-invoice-${invoice.id}`}
+              className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors duration-200"
+            >
+              <Edit className="w-4 h-4" />
+              <span>Modifier</span>
+            </button>
+          )}
+          
+          {/* Status Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg border transition-colors duration-200 ${
+                getStatusColor(invoice.status).replace('border-', 'bg-opacity-20 border-').replace('text-', 'text-')
+              } hover:bg-opacity-30`}
+            >
+              <span className="font-medium text-sm">{getStatusText(invoice.status)}</span>
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            
+            {showStatusDropdown && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                <div className="py-1">
+                  {[
+                    { value: 'draft', label: 'Brouillon', color: 'text-gray-700' },
+                    { value: 'sent', label: 'Envoyée', color: 'text-blue-700' },
+                    { value: 'paid', label: 'Payée', color: 'text-green-700' },
+                    { value: 'overdue', label: 'En retard', color: 'text-red-700' },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setShowStatusDropdown(false);
+                        handleStatusSave(option.value);
+                      }}
+                      disabled={saving}
+                      className={`w-full flex items-center justify-between px-4 py-2 text-left hover:bg-gray-50 transition-colors duration-200 ${
+                        invoice.status === option.value ? 'bg-gray-50' : ''
+                      } disabled:opacity-50`}
+                    >
+                      <span className={`${option.color} font-medium`}>
+                        {option.label}
+                      </span>
+                      {invoice.status === option.value && (
+                        <Check className="w-4 h-4 text-green-600" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
           <button
             onClick={handlePrint}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
@@ -240,17 +302,31 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
         </div>
       </div>
 
+      {/* Click outside to close dropdown */}
+      {showStatusDropdown && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setShowStatusDropdown(false)}
+        />
+      )}
+
       {/* Invoice Layout */}
       <div className="bg-white shadow-sm border border-gray-200 rounded-lg p-8 print:shadow-none print:border-none">
         {/* Invoice Header */}
-        <div className="border-b border-gray-200 pb-6 mb-6">
+        <div className="pb-3 mb-3">
           <div className="flex justify-between items-start">
             <div>
-              <img 
-                src="https://pub-237d2da54b564d23aaa1c3826e1d4e65.r2.dev/gepronet/gepronet.png" 
-                alt="Gepronet Logo" 
-                className="w-48 h-auto mb-4"
-              />
+              <div className="w-64 text-center text-sm leading-tight mb-4">
+                <div className="font-bold text-lg text-gray-900">GETRADIS</div>
+                <div className="font-semibold text-gray-800">Magasin Gepronet</div>
+                <div className="text-gray-700 mt-1">111, Avenue Mohamed Belhassan</div>
+                <div className="text-gray-700">Elouazani - RABAT</div>
+                <div className="text-gray-700 mt-1">Patente : 25903587 - R. C. : 29149</div>
+                <div className="text-gray-700">I. F. : 03315202</div>
+                <div className="text-gray-700 mt-1">Tél : 0537654006</div>
+                <div className="text-gray-700">Fax: 0537756864</div>
+                <div className="text-gray-700">e-mail : contact@gepronet.com</div>
+              </div>
             </div>
             <div className="text-right">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">FACTURE</h1>
@@ -259,83 +335,25 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
               {invoice.due_date && (
                 <p className="text-sm text-gray-600">Échéance: {formatDate(invoice.due_date)}</p>
               )}
-              <div className="mt-2">
-                {editingStatus ? (
-                  <div className="flex items-center space-x-2 print:hidden">
-                    <select
-                      value={newStatus}
-                      onChange={(e) => setNewStatus(e.target.value)}
-                      className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
-                    >
-                      <option value="draft">Brouillon</option>
-                      <option value="sent">Envoyée</option>
-                      <option value="paid">Payée</option>
-                      <option value="overdue">En retard</option>
-                    </select>
-                    <button
-                      onClick={handleStatusSave}
-                      disabled={saving}
-                      className="flex items-center space-x-1 px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50"
-                    >
-                      <Save className="w-3 h-3" />
-                      <span>{saving ? '...' : 'OK'}</span>
-                    </button>
-                    <button
-                      onClick={handleStatusCancel}
-                      className="px-2 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400"
-                    >
-                      Annuler
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(invoice.status)}`}>
-                      {getStatusText(invoice.status)}
-                    </span>
-                    <button
-                      onClick={() => setEditingStatus(true)}
-                      className="text-xs text-blue-600 hover:text-blue-800 print:hidden"
-                    >
-                      Modifier
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
 
         {/* Customer Information */}
-        <div className="mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Facturé à:</h3>
-              <div className="text-gray-700">
-                <p className="font-semibold">{invoice.customer_name}</p>
-                {invoice.customer_email && <p>{invoice.customer_email}</p>}
-                {invoice.customer_phone && <p>{invoice.customer_phone}</p>}
-                {invoice.customer_address && (
-                  <p className="mt-2 whitespace-pre-line">{invoice.customer_address}</p>
-                )}
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Détails de la facture:</h3>
-              <div className="text-gray-700 space-y-1">
-                <p><span className="font-medium">Numéro:</span> {invoice.invoice_number}</p>
-                <p><span className="font-medium">Date d'émission:</span> {formatDate(invoice.invoice_date)}</p>
-                {invoice.due_date && (
-                  <p><span className="font-medium">Date d'échéance:</span> {formatDate(invoice.due_date)}</p>
-                )}
-                <p><span className="font-medium">Statut:</span> <span className="capitalize">{invoice.status}</span></p>
-              </div>
+        <div className="mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Facturé à:</h3>
+            <div className="text-gray-700">
+              <p className="font-semibold">{invoice.customer_name}</p>
+              {invoice.customer_address && (
+                <p className="mt-1 whitespace-pre-line">{invoice.customer_address}</p>
+              )}
             </div>
           </div>
         </div>
 
         {/* Line Items Table */}
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Articles</h3>
+        <div className="mb-6">
           {invoice.line_items && invoice.line_items.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse border border-gray-300">
@@ -343,7 +361,10 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
                   <tr className="bg-gray-50">
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Référence</th>
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Article</th>
-                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">Quantité</th>
+                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">
+                      <span className="print:hidden">Quantité</span>
+                      <span className="hidden print:inline">Qte</span>
+                    </th>
                     <th className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">Prix Unit. HT</th>
                     <th className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">Total HT</th>
                     <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">TVA %</th>
@@ -383,20 +404,20 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
         {/* Totals */}
         <div className="flex justify-end">
           <div className="w-80">
-            <div className="border-t border-gray-300 pt-4">
-              <div className="flex justify-between items-center py-2">
+            <div className="border-t border-gray-300 pt-2">
+              <div className="flex justify-between items-center">
                 <span className="text-gray-700">Sous-total HT:</span>
                 <span className="font-medium text-gray-900">
                   {invoice.subtotal_ht.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
                 </span>
               </div>
-              <div className="flex justify-between items-center py-2">
+              <div className="flex justify-between items-center">
                 <span className="text-gray-700">TVA:</span>
                 <span className="font-medium text-gray-900">
                   {invoice.total_vat.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
                 </span>
               </div>
-              <div className="border-t border-gray-300 pt-2 mt-2">
+              <div className="border-t border-gray-300 pt-1">
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-semibold text-gray-900">TOTAL TTC:</span>
                   <span className="text-xl font-bold text-[#21522f]">
@@ -415,12 +436,6 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
             <p className="text-gray-700 whitespace-pre-line">{invoice.notes}</p>
           </div>
         )}
-
-        {/* Footer */}
-        <div className="mt-12 pt-6 border-t border-gray-200 text-center text-sm text-gray-600">
-          <p>Merci pour votre confiance!</p>
-          <p className="mt-2">Gepronet - Gestion Professionnelle</p>
-        </div>
       </div>
     </div>
   );

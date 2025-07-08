@@ -2,17 +2,16 @@ import React, { useState } from 'react';
 import InvoiceListPage from './InvoiceListPage';
 import InvoiceFormPage from './InvoiceFormPage';
 import InvoiceDetailPage from './InvoiceDetailPage';
+import InvoiceEditPage from './InvoiceEditPage';
 
-type ViewMode = 'list' | 'form' | 'detail';
+type ViewMode = 'list' | 'form' | 'detail' | 'edit';
 
 interface InvoicePageProps {
   preFilledData?: any;
   onClearPreFilled?: () => void;
-  onGenerateDeliveryNote?: (deliveryNoteData: any) => void;
-  onGenerateReturnNote?: (returnNoteData: any) => void;
 }
 
-const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFilled, onGenerateDeliveryNote, onGenerateReturnNote }) => {
+const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFilled }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
@@ -41,23 +40,37 @@ const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFill
     setViewMode('detail');
   };
 
-  const handleGenerateDeliveryNote = (deliveryNoteData: any) => {
-    // Pass the delivery note data to parent component for navigation
-    if (onGenerateDeliveryNote) {
-      onGenerateDeliveryNote(deliveryNoteData);
-    }
+  const handleEditInvoice = (invoiceId: string) => {
+    setSelectedInvoiceId(invoiceId);
+    setViewMode('edit');
   };
 
-  const handleGenerateReturnNote = (returnNoteData: any) => {
-    // Pass the return note data to parent component for navigation
-    if (onGenerateReturnNote) {
-      onGenerateReturnNote(returnNoteData);
-    }
-  };
+  // Listen for edit navigation from detail page
+  React.useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#edit-invoice-')) {
+        const invoiceId = hash.replace('#edit-invoice-', '');
+        handleEditInvoice(invoiceId);
+        // Clear the hash
+        window.location.hash = '';
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    // Check on mount
+    handleHashChange();
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
 
   switch (viewMode) {
     case 'form':
       return <InvoiceFormPage onBack={handleBackToList} preFilledData={preFilledData} />;
+    case 'edit':
+      return <InvoiceEditPage invoiceId={selectedInvoiceId!} onBack={handleBackToList} />;
     case 'detail':
       return <InvoiceDetailPage invoiceId={selectedInvoiceId!} onBack={handleBackToList} />;
     default:
@@ -65,8 +78,7 @@ const InvoicePage: React.FC<InvoicePageProps> = ({ preFilledData, onClearPreFill
         <InvoiceListPage
           onCreateNew={handleCreateNew}
           onViewInvoice={handleViewInvoice}
-          onGenerateDeliveryNote={handleGenerateDeliveryNote}
-          onGenerateReturnNote={handleGenerateReturnNote}
+          onEditInvoice={handleEditInvoice}
         />
       );
   }

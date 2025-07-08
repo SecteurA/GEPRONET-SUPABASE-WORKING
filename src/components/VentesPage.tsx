@@ -20,6 +20,10 @@ interface Order {
   onGenerateInvoice?: (orderData: any) => void;
 }
 
+interface VentesPageProps {
+  onGenerateInvoice?: (orderData: any) => void;
+}
+
 const VentesPage: React.FC<VentesPageProps> = ({ onGenerateInvoice }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);

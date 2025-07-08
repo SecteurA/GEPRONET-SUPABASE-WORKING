@@ -449,12 +449,15 @@ const QuoteFormPage: React.FC<QuoteFormPageProps> = ({ onBack, preFilledData, on
                   <tr className="bg-gray-50">
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Référence</th>
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Article</th>
-                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">Quantité</th>
+                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">
+                      <span className="print:hidden">Quantité</span>
+                      <span className="hidden print:inline">Qte</span>
+                    </th>
                     <th className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">Prix Unit. HT</th>
                     <th className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">Total HT</th>
                     <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">TVA %</th>
                     <th className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">TVA</th>
-                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">Actions</th>
+                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900 print:hidden">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -483,7 +486,7 @@ const QuoteFormPage: React.FC<QuoteFormPageProps> = ({ onBack, preFilledData, on
                       <td className="border border-gray-300 px-4 py-3 text-right text-sm text-gray-900">
                         {item.vat_amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
                       </td>
-                      <td className="border border-gray-300 px-4 py-3 text-center">
+                      <td className="border border-gray-300 px-4 py-3 text-center print:hidden">
                         <button
                           onClick={() => removeLineItem(item.id)}
                           className="text-red-600 hover:text-red-900 transition-colors duration-200"

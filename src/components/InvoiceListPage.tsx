@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Search, ChevronLeft, ChevronRight, Plus, Eye, Edit, FileText, Truck, RotateCcw } from 'lucide-react';
+import { RefreshCw, Search, ChevronLeft, ChevronRight, Plus, Eye, Edit, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Invoice {
@@ -23,11 +23,10 @@ interface Invoice {
 interface InvoiceListPageProps {
   onCreateNew: () => void;
   onViewInvoice: (invoiceId: string) => void;
-  onGenerateDeliveryNote?: (invoice: Invoice) => void;
-  onGenerateReturnNote?: (invoice: Invoice) => void;
+  onEditInvoice?: (invoiceId: string) => void;
 }
 
-const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewInvoice, onGenerateDeliveryNote, onGenerateReturnNote }) => {
+const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewInvoice, onEditInvoice }) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -126,95 +125,6 @@ const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewIn
         return 'Brouillon';
       default:
         return status;
-    }
-  };
-
-  const handleGenerateDeliveryNote = async (invoice: Invoice) => {
-    try {
-      // Don't show any loading states, just prepare the data and navigate
-      
-      // Fetch invoice details including line items
-      const { data: lineItems, error: lineItemsError } = await supabase
-        .from('invoice_line_items')
-        .select('*')
-        .eq('invoice_id', invoice.id)
-        .order('created_at', { ascending: true });
-
-      if (lineItemsError) {
-        console.error('Error loading invoice line items:', lineItemsError);
-        return;
-      }
-
-      // Transform invoice data to delivery note format
-      const deliveryNoteData = {
-        invoice_id: invoice.id,
-        customer_name: invoice.customer_name,
-        customer_email: invoice.customer_email,
-        customer_phone: invoice.customer_phone,
-        customer_address: invoice.customer_address,
-        delivery_date: new Date().toISOString().split('T')[0],
-        notes: `Bon de livraison généré à partir de la facture ${invoice.invoice_number}`,
-        line_items: (lineItems || []).map((item: any) => ({
-          product_id: item.product_id,
-          product_sku: item.product_sku || '',
-          product_name: item.product_name,
-          quantity: item.quantity,
-        })),
-      };
-
-      // Call parent callback if provided
-      if (onGenerateDeliveryNote) {
-        onGenerateDeliveryNote(deliveryNoteData);
-      }
-
-    } catch (err) {
-      console.error('Error preparing delivery note data:', err);
-    }
-  };
-
-  const handleGenerateReturnNote = async (invoice: Invoice) => {
-    try {
-      // Fetch invoice details including line items
-      const { data: lineItems, error: lineItemsError } = await supabase
-        .from('invoice_line_items')
-        .select('*')
-        .eq('invoice_id', invoice.id)
-        .order('created_at', { ascending: true });
-
-      if (lineItemsError) {
-        console.error('Error loading invoice line items:', lineItemsError);
-        return;
-      }
-
-      // Transform invoice data to return note format
-      const returnNoteData = {
-        invoice_id: invoice.id,
-        customer_name: invoice.customer_name,
-        customer_email: invoice.customer_email,
-        customer_phone: invoice.customer_phone,
-        customer_address: invoice.customer_address,
-        return_date: new Date().toISOString().split('T')[0],
-        reason: '',
-        notes: `Bon de retour généré à partir de la facture ${invoice.invoice_number}`,
-        line_items: (lineItems || []).map((item: any) => ({
-          id: `return-${item.id}`,
-          product_id: item.product_id,
-          product_sku: item.product_sku || '',
-          product_name: item.product_name,
-          quantity_returned: 0, // User will select quantity to return
-          max_quantity: item.quantity,
-          unit_price_ht: item.unit_price_ht,
-          total_ht: 0, // Will be calculated based on quantity_returned
-        })),
-      };
-
-      // Call parent callback if provided
-      if (onGenerateReturnNote) {
-        onGenerateReturnNote(returnNoteData);
-      }
-
-    } catch (err) {
-      console.error('Error preparing return note data:', err);
     }
   };
 
@@ -393,26 +303,19 @@ const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewIn
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleGenerateDeliveryNote(invoice);
-                          }}
-                          className="text-green-600 hover:text-green-900 transition-colors duration-200"
-                          title="Générer bon de livraison"
-                        >
-                          <Truck className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleGenerateReturnNote(invoice);
-                          }}
-                          className="text-orange-600 hover:text-orange-900 transition-colors duration-200"
-                          title="Générer bon de retour"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                        </button>
+                        {/* Edit button - only show for draft invoices */}
+                        {invoice.status === 'draft' && onEditInvoice && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditInvoice(invoice.id);
+                            }}
+                            className="text-orange-600 hover:text-orange-900 transition-colors duration-200"
+                            title="Modifier la facture"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

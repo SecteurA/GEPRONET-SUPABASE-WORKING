@@ -373,8 +373,11 @@ const PurchaseOrderFormPage: React.FC<PurchaseOrderFormPageProps> = ({ onBack, p
                   <tr className="bg-gray-50">
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Référence</th>
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900">Article</th>
-                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">Quantité</th>
-                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">Actions</th>
+                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900">
+                      <span className="print:hidden">Quantité Commandée</span>
+                      <span className="hidden print:inline">Qte Cmd.</span>
+                    </th>
+                    <th className="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-900 print:hidden">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -391,7 +394,7 @@ const PurchaseOrderFormPage: React.FC<PurchaseOrderFormPageProps> = ({ onBack, p
                           className="w-20 px-2 py-1 border border-gray-300 rounded text-center focus:ring-2 focus:ring-[#21522f] focus:border-transparent"
                         />
                       </td>
-                      <td className="border border-gray-300 px-4 py-3 text-center">
+                      <td className="border border-gray-300 px-4 py-3 text-center print:hidden">
                         <button
                           onClick={() => removeLineItem(item.id)}
                           className="text-red-600 hover:text-red-900 transition-colors duration-200"
