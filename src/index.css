@@ -101,6 +101,24 @@
     display: none !important;
   }
   
+  /* Hide summary cards section specifically */
+  .print\\:hidden {
+    display: none !important;
+  }
+  
+  /* Hide summary cards by targeting their specific structure */
+  .grid.grid-cols-1.md\\:grid-cols-4.gap-6.mb-8 {
+    display: none !important;
+  }
+  
+  /* Hide any div containing summary cards */
+  .bg-green-50.border.border-green-200.rounded-lg.p-6,
+  .bg-blue-50.border.border-blue-200.rounded-lg.p-6,
+  .bg-purple-50.border.border-purple-200.rounded-lg.p-6,
+  .bg-gray-50.border.border-gray-200.rounded-lg.p-6 {
+    display: none !important;
+  }
+  
   /* Ensure proper page breaks */
   .print\\:break-inside-avoid {
     break-inside: avoid;

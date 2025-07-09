@@ -2,6 +2,7 @@ import React from 'react';
 import { 
   BarChart3, 
   ShoppingCart, 
+  Calculator,
   FileText, 
   Package, 
   Truck,
@@ -29,6 +30,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
       id: 'ventes',
       label: 'Ventes',
       icon: ShoppingCart,
+    },
+    {
+      id: 'cash-control',
+      label: 'Contrôle de caisse',
+      icon: Calculator,
     },
     {
       id: 'devis',

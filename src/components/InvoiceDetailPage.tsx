@@ -47,6 +47,8 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState('');
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
 
   useEffect(() => {
     fetchInvoiceDetail();
@@ -134,7 +136,7 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
     }
   };
 
-  const handleStatusSave = async (selectedStatus?: string) => {
+  const handleStatusSave = async (selectedStatus?: string, bypassModalCheck = false) => {
     const statusToUpdate = selectedStatus || newStatus;
     
     if (!invoice || statusToUpdate === invoice.status) {
@@ -143,17 +145,38 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
       return;
     }
 
+    // If changing to 'paid', show payment method selector (unless bypassing)
+    if (statusToUpdate === 'paid' && invoice.status !== 'paid' && !bypassModalCheck) {
+      setShowStatusDropdown(false);
+      setShowPaymentMethodModal(true);
+      setNewStatus(statusToUpdate);
+      return;
+    }
+
     try {
       setSaving(true);
       setError('');
       setSuccess('');
 
+      // Prepare update data
+      const updateData: any = {
+        status: statusToUpdate,
+        updated_at: new Date().toISOString(),
+      };
+
+      // If marking as paid, set paid_date to today
+      if (statusToUpdate === 'paid' && invoice.status !== 'paid') {
+        updateData.paid_date = new Date().toISOString().split('T')[0];
+        updateData.payment_method = selectedPaymentMethod;
+      }
+      // If changing from paid to another status, clear paid_date
+      else if (statusToUpdate !== 'paid' && invoice.status === 'paid') {
+        updateData.paid_date = null;
+        updateData.payment_method = null;
+      }
       const { error: updateError } = await supabase
         .from('invoices')
-        .update({ 
-          status: statusToUpdate,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', invoiceId);
 
       if (updateError) {
@@ -163,7 +186,12 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
 
       setInvoice(prev => prev ? { ...prev, status: statusToUpdate } : null);
       setEditingStatus(false);
-      setSuccess('Statut mis à jour avec succès');
+      
+      let successMessage = 'Statut mis à jour avec succès';
+      if (statusToUpdate === 'paid' && invoice.status !== 'paid') {
+        successMessage += ` et paiement enregistré (${selectedPaymentMethod})`;
+      }
+      setSuccess(successMessage);
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000);
@@ -173,6 +201,8 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
     } finally {
       setSaving(false);
       setShowStatusDropdown(false);
+      setShowPaymentMethodModal(false);
+      setSelectedPaymentMethod('');
     }
   };
 
@@ -180,6 +210,21 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
     setNewStatus(invoice?.status || '');
     setEditingStatus(false);
     setShowStatusDropdown(false);
+  };
+
+  const handlePaymentMethodConfirm = () => {
+    if (!selectedPaymentMethod) {
+      setError('Veuillez sélectionner un mode de paiement');
+      return;
+    }
+    // Directly proceed with the status update, bypassing the modal check
+    handleStatusSave(newStatus, true);
+  };
+
+  const handlePaymentMethodCancel = () => {
+    setShowPaymentMethodModal(false);
+    setSelectedPaymentMethod('');
+    setNewStatus(invoice?.status || '');
   };
 
   if (loading) {
@@ -265,14 +310,19 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
                   {[
                     { value: 'draft', label: 'Brouillon', color: 'text-gray-700' },
                     { value: 'sent', label: 'Envoyée', color: 'text-blue-700' },
-                    { value: 'paid', label: 'Payée', color: 'text-green-700' },
                     { value: 'overdue', label: 'En retard', color: 'text-red-700' },
+                    { value: 'paid', label: 'Payée', color: 'text-green-700' },
                   ].map((option) => (
                     <button
                       key={option.value}
                       onClick={() => {
                         setShowStatusDropdown(false);
-                        handleStatusSave(option.value);
+                        if (option.value === 'paid' && invoice.status !== 'paid') {
+                          setShowPaymentMethodModal(true);
+                          setNewStatus(option.value);
+                        } else {
+                          handleStatusSave(option.value);
+                        }
                       }}
                       disabled={saving}
                       className={`w-full flex items-center justify-between px-4 py-2 text-left hover:bg-gray-50 transition-colors duration-200 ${
@@ -310,6 +360,62 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
         />
       )}
 
+      {/* Payment Method Modal */}
+      {showPaymentMethodModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Sélectionner le mode de paiement
+              </h3>
+              <p className="text-sm text-gray-600 mb-6">
+                Comment cette facture a-t-elle été payée ?
+              </p>
+              
+              <div className="space-y-3 mb-6">
+                {[
+                  { value: 'Espèces', label: 'Espèces', icon: '💵' },
+                  { value: 'Virements', label: 'Virements', icon: '🏦' },
+                  { value: 'Chèque', label: 'Chèque', icon: '📝' },
+                ].map((method) => (
+                  <button
+                    key={method.value}
+                    onClick={() => setSelectedPaymentMethod(method.value)}
+                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg border transition-colors duration-200 ${
+                      selectedPaymentMethod === method.value
+                        ? 'border-[#21522f] bg-green-50 text-green-900'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="text-xl">{method.icon}</span>
+                    <span className="font-medium">{method.label}</span>
+                    {selectedPaymentMethod === method.value && (
+                      <span className="ml-auto text-green-600">✓</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={handlePaymentMethodCancel}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handlePaymentMethodConfirm}
+                  disabled={!selectedPaymentMethod || saving}
+                  className="px-4 py-2 bg-[#21522f] text-white rounded-lg hover:bg-[#1a4025] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                >
+                  {saving ? 'Enregistrement...' : 'Confirmer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Invoice Layout */}
       <div className="bg-white shadow-sm border border-gray-200 rounded-lg p-8 print:shadow-none print:border-none">
         {/* Invoice Header */}
@@ -334,6 +440,11 @@ const InvoiceDetailPage: React.FC<InvoiceDetailPageProps> = ({ invoiceId, onBack
               <p className="text-sm text-gray-600">Date: {formatDate(invoice.invoice_date)}</p>
               {invoice.due_date && (
                 <p className="text-sm text-gray-600">Échéance: {formatDate(invoice.due_date)}</p>
+              )}
+              {invoice.status === 'paid' && (invoice as any).payment_method && (
+                <p className="text-sm text-green-600">
+                  Payé par: {(invoice as any).payment_method}
+                </p>
               )}
             </div>
           </div>

@@ -206,10 +206,10 @@ const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewIn
                 </th>
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('due_date')}
+                  onClick={() => handleSort('payment_method')}
                 >
-                  Échéance
-                  {sortField === 'due_date' && (
+                  Mode de paiement
+                  {sortField === 'payment_method' && (
                     <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                   )}
                 </th>
@@ -278,7 +278,7 @@ const InvoiceListPage: React.FC<InvoiceListPageProps> = ({ onCreateNew, onViewIn
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {invoice.due_date ? formatDate(invoice.due_date) : '-'}
+                      {invoice.payment_method || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(invoice.status)}`}>

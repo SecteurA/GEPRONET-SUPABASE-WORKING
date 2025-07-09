@@ -24,6 +24,10 @@ interface InvoiceData {
   customer_address: string;
   invoice_date: string;
   due_date: string;
+  status?: string;
+  payment_method?: string;
+  paid_date?: string;
+  source?: string;
   notes: string;
   line_items: InvoiceLineItem[];
 }
@@ -49,7 +53,7 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
     const invoiceData: InvoiceData = await req.json();
@@ -118,7 +122,10 @@ Deno.serve(async (req: Request) => {
         customer_address: invoiceData.customer_address || '',
         invoice_date: invoiceData.invoice_date || new Date().toISOString().split('T')[0],
         due_date: invoiceData.due_date || null,
-        status: 'draft',
+        status: invoiceData.status || 'draft',
+        payment_method: invoiceData.payment_method || null,
+        paid_date: invoiceData.paid_date || null,
+        source: invoiceData.source || 'manual',
         subtotal_ht: subtotalHT,
         total_vat: totalVAT,
         total_ttc: totalTTC,

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Calendar, FileText, Save } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 interface SalesJournalCreatePageProps {
   onBack: () => void;
@@ -8,6 +9,7 @@ interface SalesJournalCreatePageProps {
 const SalesJournalCreatePage: React.FC<SalesJournalCreatePageProps> = ({ onBack }) => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
+  const [checkingCashControl, setCheckingCashControl] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -19,8 +21,24 @@ const SalesJournalCreatePage: React.FC<SalesJournalCreatePageProps> = ({ onBack 
 
     try {
       setLoading(true);
+      setCheckingCashControl(true);
       setError('');
       setSuccess('');
+
+      // First check if cash control exists for this date
+      const { data: cashControl, error: cashError } = await supabase
+        .from('cash_controls')
+        .select('*')
+        .eq('control_date', selectedDate)
+        .eq('status', 'closed')
+        .single();
+
+      setCheckingCashControl(false);
+
+      if (cashError || !cashControl) {
+        setError('La caisse doit être clôturée avant de pouvoir générer le journal de vente pour cette date');
+        return;
+      }
 
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-sales-journal`, {
         method: 'POST',
@@ -102,10 +120,11 @@ const SalesJournalCreatePage: React.FC<SalesJournalCreatePageProps> = ({ onBack 
           </div>
           
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Sélectionner la date</h2>
-            <p className="text-gray-600">
-              Choisissez la date pour laquelle vous souhaitez créer le journal de vente.
-              Toutes les commandes de cette date seront automatiquement importées.
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Date du journal
+            </label>
+            <p className="text-sm text-gray-600 mb-3">
+              Sélectionnez une date pour créer un journal de vente basé sur les factures payées à cette date.
             </p>
           </div>
 
@@ -157,8 +176,12 @@ const SalesJournalCreatePage: React.FC<SalesJournalCreatePageProps> = ({ onBack 
             </button>
 
             <div className="text-sm text-gray-500 space-y-1">
-              <p>• Le journal importera automatiquement toutes les commandes de la date sélectionnée</p>
+              <p>• Le journal de vente regroupera toutes les factures marquées comme payées à la date sélectionnée</p>
+              <p>• Seules les factures avec le statut "Payée" seront incluses dans le journal</p>
+              <p>• Les commandes WooCommerce avec le statut "Terminée" seront également incluses</p>
+              <p>• <strong>Important:</strong> La caisse doit être clôturée avant de pouvoir générer le journal</p>
               <p>• Chaque article sera listé individuellement avec ses détails de TVA</p>
+              <p>• Si le même produit apparaît dans plusieurs sources, les quantités seront consolidées</p>
               <p>• Un numéro unique sera généré (ex: FG20250001)</p>
             </div>
           </div>

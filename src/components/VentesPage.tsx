@@ -198,6 +198,10 @@ const VentesPage: React.FC<VentesPageProps> = ({ onGenerateInvoice }) => {
         customer_address: order.billing_address || order.shipping_address || '',
         invoice_date: new Date().toISOString().split('T')[0],
         due_date: '',
+        status: 'paid', // Auto-mark as paid since it's from a completed order
+        payment_method: order.payment_method || 'N/A',
+        paid_date: new Date().toISOString().split('T')[0],
+        source: 'order', // Mark source as order
         notes: `Facture générée à partir de la commande #${order.order_number}`,
         line_items: (orderDetail.line_items || []).map((item: any, index: number) => {
           // Apply the same display logic as the order view for consistency

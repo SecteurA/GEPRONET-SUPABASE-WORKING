@@ -119,7 +119,7 @@ const SalesJournalListPage: React.FC<SalesJournalListPageProps> = ({ onCreateNew
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Journal de Vente</h1>
-          <p className="text-gray-600">Gestion des journaux de vente quotidiens</p>
+          <p className="text-gray-600">Journal des ventes basé sur les factures payées et commandes terminées</p>
         </div>
         <div className="flex space-x-3">
           <button

@@ -14,6 +14,7 @@ import QuotePage from './components/QuotePage';
 import SalesJournalPage from './components/SalesJournalPage';
 import SuppliersPage from './components/SuppliersPage';
 import PurchaseOrderPage from './components/PurchaseOrderPage';
+import CashControlPage from './components/CashControlPage';
 
 function App() {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -49,6 +50,8 @@ function App() {
     switch (activeSection) {
       case 'ventes':
         return <VentesPage onGenerateInvoice={handleGenerateInvoiceFromOrder} />;
+      case 'cash-control':
+        return <CashControlPage />;
       case 'journal':
         return <SalesJournalPage />;
       case 'factures':
