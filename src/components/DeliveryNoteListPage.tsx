@@ -41,6 +41,7 @@ const DeliveryNoteListPage: React.FC<DeliveryNoteListPageProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -165,7 +166,12 @@ const DeliveryNoteListPage: React.FC<DeliveryNoteListPageProps> = ({
       return;
     }
 
+    if (isGenerating) {
+      return;
+    }
+
     try {
+      setIsGenerating(true);
       setError('');
       setSuccess('');
 
@@ -189,7 +195,7 @@ const DeliveryNoteListPage: React.FC<DeliveryNoteListPageProps> = ({
 
       setSuccess(result.message);
       setSelectedDeliveryNotes([]);
-      fetchDeliveryNotes(); // Refresh the list
+      fetchDeliveryNotes();
 
       // Navigate to the generated invoice if callback is provided
       if (onGenerateInvoice && result.invoice) {
@@ -198,6 +204,8 @@ const DeliveryNoteListPage: React.FC<DeliveryNoteListPageProps> = ({
 
     } catch (err) {
       setError('Erreur lors de la génération de la facture');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -232,10 +240,16 @@ const DeliveryNoteListPage: React.FC<DeliveryNoteListPageProps> = ({
           {selectedDeliveryNotes.length > 0 && (
             <button
               onClick={handleGenerateInvoiceFromSelected}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+              disabled={isGenerating}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
               <FileText className="w-4 h-4" />
-              <span>Générer Facture ({selectedDeliveryNotes.length})</span>
+              <span>
+                {isGenerating
+                  ? 'Génération en cours...' 
+                  : `Générer Facture (${selectedDeliveryNotes.length})`
+                }
+              </span>
             </button>
           )}
           <button
