@@ -29,6 +29,8 @@ interface InvoiceLineItem {
 }
 
 interface Invoice {
+  id?: string;
+  invoice_number?: string;
   customer_name: string;
   customer_email: string;
   customer_phone: string;
@@ -37,6 +39,7 @@ interface Invoice {
   due_date: string;
   notes: string;
   line_items: InvoiceLineItem[];
+  delivery_note_numbers?: string[];
 }
 
 interface InvoiceFormPageProps {
@@ -66,11 +69,18 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
   const [saving, setSaving] = useState(false);
   const [searchTouched, setSearchTouched] = useState(false);
   const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [isPreSavedInvoice, setIsPreSavedInvoice] = useState(false);
 
   // Initialize with pre-filled data if provided
   useEffect(() => {
     if (preFilledData) {
       setInvoice(preFilledData);
+      
+      // DÉTECTER SI C'EST UNE FACTURE DÉJÀ SAUVÉE
+      if (preFilledData.id && preFilledData.invoice_number) {
+        setIsPreSavedInvoice(true);
+        console.log('🔍 Facture pré-sauvée détectée:', preFilledData.invoice_number);
+      }
       
       // Create a mock client object from the pre-filled data if customer info exists
       if (preFilledData.customer_name) {
@@ -94,7 +104,11 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
         
         // Show special message for delivery note source
         if (preFilledData.delivery_note_numbers) {
-          setSuccess(`Facture pré-remplie à partir des bons de livraison: ${preFilledData.delivery_note_numbers.join(', ')}`);
+          if (preFilledData.id) {
+            setSuccess(`Facture ${preFilledData.invoice_number} générée à partir des bons: ${preFilledData.delivery_note_numbers.join(', ')}`);
+          } else {
+            setSuccess(`Facture pré-remplie à partir des bons de livraison: ${preFilledData.delivery_note_numbers.join(', ')}`);
+          }
         }
       }
     }
@@ -303,6 +317,15 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
   const { subtotalHT, totalVAT, totalTTC } = calculateTotals();
 
   const saveInvoice = async () => {
+    // PROTECTION : Si c'est une facture déjà sauvée, ne pas resauvegarder
+    if (isPreSavedInvoice && invoice.id && invoice.invoice_number) {
+      setSuccess(`Facture ${invoice.invoice_number} déjà créée avec succès`);
+      setTimeout(() => {
+        onBack(); // Retour à la liste des factures
+      }, 2000);
+      return;
+    }
+
     try {
       setSaving(true);
       setError('');
@@ -373,8 +396,18 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
             <span>Retour aux factures</span>
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Nouvelle Facture</h1>
-            <p className="text-gray-600">Créer une nouvelle facture</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {isPreSavedInvoice && invoice.invoice_number 
+                ? `Facture ${invoice.invoice_number}` 
+                : 'Nouvelle Facture'
+              }
+            </h1>
+            <p className="text-gray-600">
+              {isPreSavedInvoice 
+                ? 'Facture générée avec succès - Consultez les détails' 
+                : 'Créer une nouvelle facture'
+              }
+            </p>
           </div>
         </div>
         <div className="flex space-x-3">
@@ -384,7 +417,14 @@ const InvoiceFormPage: React.FC<InvoiceFormPageProps> = ({ onBack, preFilledData
             className="flex items-center space-x-2 px-4 py-2 bg-[#21522f] text-white rounded-lg hover:bg-[#1a4025] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
           >
             <Save className="w-4 h-4" />
-            <span>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</span>
+            <span>
+              {isPreSavedInvoice 
+                ? 'Retour à la liste' 
+                : saving 
+                  ? 'Sauvegarde...' 
+                  : 'Sauvegarder'
+              }
+            </span>
           </button>
         </div>
       </div>
